@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../constants/style.dart';
+import '../../providers/auth_provider.dart';
 
 class LogoutPage extends StatelessWidget {
   const LogoutPage({Key? key}) : super(key: key);
@@ -44,9 +46,8 @@ class LogoutPage extends StatelessWidget {
                       ),
                     ),
                     onPressed: () {
-                      // Add your logout logic here
-                      // For now, just navigate to login page
-                      Navigator.of(context).pushReplacement(
+                      context.read<AuthProvider>().logout();
+                      Navigator.of(context).pushAndRemoveUntil(
                         MaterialPageRoute(
                           builder: (context) => const Scaffold(
                             body: Center(
@@ -54,6 +55,7 @@ class LogoutPage extends StatelessWidget {
                             ),
                           ),
                         ),
+                        (route) => false,
                       );
                     },
                     child: const Text("Logout"),

@@ -4,6 +4,10 @@ import '../../constants/style.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../components/dashboard_header.dart';
 import '../auth/logout_page.dart';
+import 'terms_page.dart';
+import 'settings_page.dart';
+import 'contact_page.dart';
+import 'calendar_page.dart';
 
 class PageContainer extends StatelessWidget {
   final DashboardPage currentPage;
@@ -31,11 +35,11 @@ class PageContainer extends StatelessWidget {
       case DashboardPage.productStock:
         return ResponsivePage(title: 'Product Stock');
       case DashboardPage.calendar:
-        return ResponsivePage(title: 'Calendar');
+        return const CalendarPage();
       case DashboardPage.contact:
-        return ResponsivePage(title: 'Contact');
+        return const ContactPage();
       case DashboardPage.settings:
-        return ResponsivePage(title: 'Settings');
+        return const SettingsPage();
       case DashboardPage.logout:
         return const LogoutPage();
       default:
