@@ -3,6 +3,7 @@ import '../../constants/pages.dart';
 import '../../constants/style.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../components/dashboard_header.dart';
+import '../auth/logout_page.dart';
 
 class PageContainer extends StatelessWidget {
   final DashboardPage currentPage;
@@ -36,7 +37,9 @@ class PageContainer extends StatelessWidget {
       case DashboardPage.settings:
         return ResponsivePage(title: 'Settings');
       case DashboardPage.logout:
-        return ResponsivePage(title: 'Logout');
+        return const LogoutPage();
+      default:
+        return ResponsivePage(title: page.toString().split('.').last);
     }
   }
 }

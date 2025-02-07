@@ -9,6 +9,9 @@ const defaultPadding = 16.0;
 const cardBgColor = Color(0xFF2A2D3E);
 const cardBorderRadius = 10.0;
 
+const errorColor = Color(0xFFFF0000);
+const warningColor = Color(0xFFFFA500);
+
 class Responsive {
   static bool isMobile(BuildContext context) =>
       MediaQuery.of(context).size.width < 850;
