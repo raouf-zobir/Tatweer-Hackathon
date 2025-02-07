@@ -7,5 +7,6 @@ enum DashboardPage {
   calendar,
   contact,
   settings,
+  aiAssistant,
   logout
 }

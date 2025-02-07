@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/theme_provider.dart';
+import 'screens/pages/ai_assistant_page.dart';
 
 void main() {
   runApp(MyApp());
@@ -31,6 +32,9 @@ class MyApp extends StatelessWidget {
             theme: themeProvider.getLightTheme(context),
             darkTheme: themeProvider.getDarkTheme(context),
             home: const LoginPage(),
+            routes: {
+              '/ai-assistant': (context) => AIAssistantPage(),
+            },
           );
         },
       ),
