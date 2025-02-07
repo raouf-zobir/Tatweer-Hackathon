@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'login_page.dart'; // Add this import
 import '../../constants/style.dart';
 
 class LogoutPage extends StatelessWidget {
@@ -44,15 +45,10 @@ class LogoutPage extends StatelessWidget {
                       ),
                     ),
                     onPressed: () {
-                      // Add your logout logic here
-                      // For now, just navigate to login page
+                      // Navigate to login page
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
-                          builder: (context) => const Scaffold(
-                            body: Center(
-                              child: Text("Login Page (To be implemented)"),
-                            ),
-                          ),
+                          builder: (context) => const LoginPage(),
                         ),
                       );
                     },
