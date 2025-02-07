@@ -45,30 +45,94 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
           children: [
             DashboardHeader(title: "Logistics Dashboard"),
             const SizedBox(height: defaultPadding),
-            Row(
-              children: [
-                Text(
-                  "Overview",
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const Spacer(),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: defaultPadding,
-                      vertical: defaultPadding / 2,
-                    ),
+            Container(
+              padding: const EdgeInsets.all(defaultPadding),
+              decoration: BoxDecoration(
+                color: secondaryColor,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 5,
+                    offset: Offset(0, 2),
                   ),
-                  onPressed: () {
-                    _animationController.reset();
-                    _animationController.forward();
-                    // Add your refresh logic here
-                  },
-                  icon: const Icon(Icons.refresh),
-                  label: const Text("Refresh"),
-                ),
-              ],
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Overview",
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            "Last 24 hours performance",
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          _buildOverviewStat(
+                            title: "Success Rate",
+                            value: "95%",
+                            color: Colors.green,
+                            icon: Icons.trending_up,
+                          ),
+                          SizedBox(width: defaultPadding),
+                          _buildOverviewStat(
+                            title: "On Time",
+                            value: "98%",
+                            color: primaryColor,
+                            icon: Icons.timer,
+                          ),
+                          SizedBox(width: defaultPadding),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: defaultPadding,
+                                vertical: defaultPadding / 2,
+                              ),
+                            ),
+                            onPressed: () {
+                              _animationController.reset();
+                              _animationController.forward();
+                              // Add your refresh logic here
+                            },
+                            icon: const Icon(Icons.refresh),
+                            label: const Text("Refresh"),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: defaultPadding),
+                  Row(
+                    children: [
+                      _buildTimePeriodButton(
+                        "Today",
+                        isSelected: true,
+                      ),
+                      SizedBox(width: defaultPadding / 2),
+                      _buildTimePeriodButton("Week"),
+                      SizedBox(width: defaultPadding / 2),
+                      _buildTimePeriodButton("Month"),
+                      Spacer(),
+                      _buildExportButton(),
+                    ],
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: defaultPadding),
             SlideTransition(
@@ -129,6 +193,114 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildOverviewStat({
+    required String title,
+    required String value,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: defaultPadding,
+        vertical: defaultPadding / 2,
+      ),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          SizedBox(width: defaultPadding / 2),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                ),
+              ),
+              Text(
+                value,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimePeriodButton(String text, {bool isSelected = false}) {
+    return OutlinedButton(
+      onPressed: () {
+        // Implement time period selection
+      },
+      style: OutlinedButton.styleFrom(
+        backgroundColor: isSelected ? primaryColor : Colors.transparent,
+        side: BorderSide(
+          color: isSelected ? primaryColor : Colors.white24,
+        ),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: isSelected ? Colors.white : Colors.white70,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExportButton() {
+    return PopupMenuButton<String>(
+      icon: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.download, color: Colors.white70),
+          SizedBox(width: 4),
+          Text(
+            'Export',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ],
+      ),
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'pdf',
+          child: Row(
+            children: [
+              Icon(Icons.picture_as_pdf, color: Colors.red),
+              SizedBox(width: 8),
+              Text('Export as PDF'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'excel',
+          child: Row(
+            children: [
+              Icon(Icons.table_chart, color: Colors.green),
+              SizedBox(width: 8),
+              Text('Export as Excel'),
+            ],
+          ),
+        ),
+      ],
+      onSelected: (value) {
+        // Implement export functionality
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Exporting as $value...')),
+        );
+      },
     );
   }
 

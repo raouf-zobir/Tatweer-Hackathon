@@ -14,8 +14,14 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   bool _emailNotifications = true;
   bool _pushNotifications = true;
-  String _language = 'English';
+  String _language = 'English'; // Default language
   double _fontSize = 14.0;
+
+  final Map<String, String> _languages = {
+    'English': 'EN',
+    'العربية': 'AR',
+    'Français': 'FR',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -62,13 +68,41 @@ class _SettingsPageState extends State<SettingsPage> {
                     }
                   },
                 ),
-                _buildDropdownTile(
-                  title: "Language",
-                  value: _language,
-                  items: ['English', 'Spanish', 'French', 'Arabic'],
-                  onChanged: (value) {
-                    setState(() => _language = value ?? 'English');
-                  },
+                ListTile(
+                  title: Text("Language"),
+                  trailing: DropdownButton<String>(
+                    value: _language,
+                    items: _languages.keys.map((String language) {
+                      return DropdownMenuItem<String>(
+                        value: language,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(_languages[language]!, 
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Text(language),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        setState(() => _language = newValue);
+                        // Add language change logic here
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Language changed to $newValue'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                  ),
                 ),
                 _buildSliderTile(
                   title: "Font Size",
