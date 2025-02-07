@@ -33,27 +33,38 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
     }
   }
 
-  void _toggleSpeechButton() {
-    // First, ensure speech recognition is stopped
-    _stopListening();
-    
-    setState(() {
-      _showSpeechButton = !_showSpeechButton;
-    });
+  void _handleSpeechButtonPressed() {
+    if (_isListening) {
+      _stopListening();
+    } else {
+      _startListening();
+    }
   }
 
   void _startListening() async {
     if (!_isListening) {
-      bool available = await _speech.listen(
-        onResult: (result) => setState(() => _textController.text = result.recognizedWords),
-      );
-      setState(() => _isListening = available);
+      bool available = await _speech.initialize();
+      if (available) {
+        setState(() => _isListening = true);
+        await _speech.listen(
+          onResult: (result) {
+            if (_isListening) {  // Only update text if still listening
+              setState(() => _textController.text = result.recognizedWords);
+            }
+          },
+          listenFor: Duration(seconds: 15), // Limit listening time
+          pauseFor: Duration(seconds: 1), // Pause time before auto-stop
+          onSoundLevelChange: (level) {}, // Can be used for UI animations
+        );
+      } else {
+        _showMessage('Speech recognition not available');
+      }
     }
   }
 
-  void _stopListening() {
+  void _stopListening() async {
     if (_speech.isListening) {
-      _speech.stop();
+      await _speech.stop();
     }
     setState(() => _isListening = false);
   }
@@ -117,10 +128,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
       appBar: AppBar(
         title: Text('AI Assistant'),
         actions: [
-          IconButton(
-            icon: Icon(_showSpeechButton ? Icons.keyboard : Icons.mic),
-            onPressed: _toggleSpeechButton,
-          ),
           IconButton(
             icon: Icon(Icons.help_outline),
             onPressed: () => showDialog(
@@ -204,11 +211,12 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
                     controller: _textController,
                     minLines: 1,
                     maxLines: 4,
-                    style: TextStyle(fontSize: 16),
+                    style: TextStyle(fontSize: 16, color: Colors.white),
                     decoration: InputDecoration(
                       hintText: 'Type your message...',
+                      hintStyle: TextStyle(color: Colors.white54),
                       filled: true,
-                      fillColor: Colors.grey[200],
+                      fillColor: Colors.black,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
                         borderSide: BorderSide.none,
@@ -219,35 +227,10 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
                   ),
                 ),
                 SizedBox(width: 8),
-                if (_showSpeechButton) 
-                  AnimatedSwitcher(
-                    duration: Duration(milliseconds: 200),
-                    child: _isListening
-                        ? Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.mic_off, color: Colors.red),
-                                onPressed: _stopListening,
-                              ),
-                              SizeTransition(
-                                sizeFactor: _animationController!,
-                                axis: Axis.horizontal,
-                                child: Container(
-                                  margin: EdgeInsets.only(right: 8),
-                                  child: Text(
-                                    'Listening...',
-                                    style: TextStyle(color: Colors.red),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        : IconButton(
-                            icon: Icon(Icons.mic, color: Colors.blue),
-                            onPressed: _startListening,
-                          ),
-                  ),
+                IconButton(
+                  icon: Icon(_isListening ? Icons.mic_off : Icons.mic, color: Colors.blue),
+                  onPressed: _handleSpeechButtonPressed,
+                ),
                 IconButton(
                   icon: Icon(Icons.send, color: Colors.blue),
                   onPressed: _handleSubmit,
