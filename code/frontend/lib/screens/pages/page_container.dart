@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../constants/pages.dart';
 import '../../constants/style.dart';
 import '../dashboard/dashboard_screen.dart';
-import '../components/common_header.dart';
+import '../components/dashboard_header.dart';
 
 class PageContainer extends StatelessWidget {
   final DashboardPage currentPage;
@@ -54,7 +54,7 @@ class ResponsivePage extends StatelessWidget {
         padding: EdgeInsets.all(defaultPadding),
         child: Column(
           children: [
-            CommonHeader(title: title),
+            DashboardHeader(title: title),
             SizedBox(height: defaultPadding),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
