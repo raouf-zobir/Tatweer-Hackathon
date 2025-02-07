@@ -1,10 +1,10 @@
-import 'package:admin/controllers/menu_app_controller.dart';
-import 'package:admin/responsive.dart';
-import 'package:admin/screens/dashboard/dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import '../../controllers/menu_app_controller.dart';
+import '../../constants/pages.dart';
 import 'components/side_menu.dart';
+import '../dashboard/dashboard_screen.dart';
+import '../pages/page_container.dart';
 
 class MainScreen extends StatelessWidget {
   @override
@@ -16,17 +16,17 @@ class MainScreen extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // We want this side menu only for large screen
-            if (Responsive.isDesktop(context))
-              Expanded(
-                // default flex = 1
-                // and it takes 1/6 part of the screen
-                child: SideMenu(),
-              ),
+            // Show side menu only for large screens
+            if (MediaQuery.of(context).size.width >= 1100) Expanded(child: SideMenu()),
+            
+            // Main content area
             Expanded(
-              // It takes 5/6 part of the screen
               flex: 5,
-              child: DashboardScreen(),
+              child: Consumer<MenuAppController>(
+                builder: (context, controller, _) {
+                  return PageContainer(currentPage: controller.currentPage);
+                },
+              ),
             ),
           ],
         ),

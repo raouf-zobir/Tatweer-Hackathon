@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
+import '../../../constants/pages.dart';
+import '../../../controllers/menu_app_controller.dart';
 
 class SideMenu extends StatelessWidget {
-  const SideMenu({
-    Key? key,
-  }) : super(key: key);
+  const SideMenu({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -14,45 +14,50 @@ class SideMenu extends StatelessWidget {
           DrawerHeader(
             child: Image.asset("assets/images/logo.png"),
           ),
-          DrawerListTile(
-            title: "Dashboard",
-            svgSrc: "assets/icons/menu_dashboard.svg",
-            press: () {},
+          _DrawerListTile(
+            title: "Dashboard", // Changed from "1 Dashboard" to "Dashboard"
+            icon: Icons.dashboard_outlined,
+            page: DashboardPage.dashboard,
           ),
-          DrawerListTile(
-            title: "Transaction",
-            svgSrc: "assets/icons/menu_tran.svg",
-            press: () {},
+          _DrawerListTile(
+            title: "Products",
+            icon: Icons.shopping_bag_outlined,
+            page: DashboardPage.products,
           ),
-          DrawerListTile(
-            title: "Task",
-            svgSrc: "assets/icons/menu_task.svg",
-            press: () {},
+          _DrawerListTile(
+            title: "Inbox",
+            icon: Icons.inbox_outlined,
+            page: DashboardPage.inbox,
           ),
-          DrawerListTile(
-            title: "Documents",
-            svgSrc: "assets/icons/menu_doc.svg",
-            press: () {},
+          _DrawerListTile(
+            title: "Order Lists",
+            icon: Icons.list_alt_outlined,
+            page: DashboardPage.orderLists,
           ),
-          DrawerListTile(
-            title: "Store",
-            svgSrc: "assets/icons/menu_store.svg",
-            press: () {},
+          _DrawerListTile(
+            title: "Product Stock",
+            icon: Icons.inventory_2_outlined,
+            page: DashboardPage.productStock,
           ),
-          DrawerListTile(
-            title: "Notification",
-            svgSrc: "assets/icons/menu_notification.svg",
-            press: () {},
+          _DrawerListTile(
+            title: "Calendar",
+            icon: Icons.calendar_today_outlined,
+            page: DashboardPage.calendar,
           ),
-          DrawerListTile(
-            title: "Profile",
-            svgSrc: "assets/icons/menu_profile.svg",
-            press: () {},
+          _DrawerListTile(
+            title: "Contact",
+            icon: Icons.contacts_outlined,
+            page: DashboardPage.contact,
           ),
-          DrawerListTile(
+          _DrawerListTile(
             title: "Settings",
-            svgSrc: "assets/icons/menu_setting.svg",
-            press: () {},
+            icon: Icons.settings_outlined,
+            page: DashboardPage.settings,
+          ),
+          _DrawerListTile(
+            title: "LogOut",
+            icon: Icons.logout_outlined,
+            page: DashboardPage.logout,
           ),
         ],
       ),
@@ -60,31 +65,32 @@ class SideMenu extends StatelessWidget {
   }
 }
 
-class DrawerListTile extends StatelessWidget {
-  const DrawerListTile({
-    Key? key,
-    // For selecting those three line once press "Command+D"
-    required this.title,
-    required this.svgSrc,
-    required this.press,
-  }) : super(key: key);
+class _DrawerListTile extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final DashboardPage page;
 
-  final String title, svgSrc;
-  final VoidCallback press;
+  const _DrawerListTile({
+    required this.title,
+    required this.icon,
+    required this.page,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      onTap: press,
-      horizontalTitleGap: 0.0,
-      leading: SvgPicture.asset(
-        svgSrc,
-        colorFilter: ColorFilter.mode(Colors.white54, BlendMode.srcIn),
-        height: 16,
-      ),
-      title: Text(
-        title,
-        style: TextStyle(color: Colors.white54),
+    return Consumer<MenuAppController>(
+      builder: (context, controller, _) => ListTile(
+        onTap: () {
+          controller.changePage(page);
+          // Close drawer on mobile
+          if (MediaQuery.of(context).size.width < 1100) {
+            Navigator.pop(context);
+          }
+        },
+        horizontalTitleGap: 16.0, // Increased from 0.0 to 16.0
+        leading: Icon(icon),
+        title: Text(title),
+        selected: controller.currentPage == page,
       ),
     );
   }
