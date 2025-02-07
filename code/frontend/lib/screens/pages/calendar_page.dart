@@ -66,57 +66,372 @@ class _CalendarPageState extends State<CalendarPage> {
     ],
   };
 
-  void _showAddEventDialog() {
-    showDialog(
+  Future<void> _showAddEventDialog() async {
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    TimeOfDay startTime = TimeOfDay(hour: 9, minute: 0);
+    TimeOfDay endTime = TimeOfDay(hour: 10, minute: 0);
+    Color selectedColor = Colors.blue;
+
+    final colors = [
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.red,
+    ];
+
+    await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Add Event'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              decoration: InputDecoration(labelText: 'Event Title'),
-            ),
-            TextField(
-              decoration: InputDecoration(labelText: 'Description'),
-            ),
-            Row(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: Text('Add Event'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: TextButton.icon(
-                    icon: Icon(Icons.access_time),
-                    label: Text('Start Time'),
-                    onPressed: () {
-                      // Implement time picker
-                    },
+                TextField(
+                  controller: titleController,
+                  decoration: InputDecoration(
+                    labelText: 'Event Title',
+                    icon: Icon(Icons.title),
                   ),
                 ),
-                Expanded(
-                  child: TextButton.icon(
-                    icon: Icon(Icons.access_time),
-                    label: Text('End Time'),
-                    onPressed: () {
-                      // Implement time picker
-                    },
+                SizedBox(height: defaultPadding),
+                TextField(
+                  controller: descriptionController,
+                  decoration: InputDecoration(
+                    labelText: 'Description',
+                    icon: Icon(Icons.description),
                   ),
+                ),
+                SizedBox(height: defaultPadding),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton.icon(
+                        icon: Icon(Icons.access_time),
+                        label: Text(startTime.format(context)),
+                        onPressed: () async {
+                          final time = await showTimePicker(
+                            context: context,
+                            initialTime: startTime,
+                          );
+                          if (time != null) {
+                            setStateDialog(() => startTime = time);
+                          }
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: TextButton.icon(
+                        icon: Icon(Icons.access_time),
+                        label: Text(endTime.format(context)),
+                        onPressed: () async {
+                          final time = await showTimePicker(
+                            context: context,
+                            initialTime: endTime,
+                          );
+                          if (time != null) {
+                            setStateDialog(() => endTime = time);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: defaultPadding),
+                Row(
+                  children: [
+                    Text('Color: '),
+                    SizedBox(width: defaultPadding),
+                    ...colors.map((color) => GestureDetector(
+                      onTap: () => setStateDialog(() => selectedColor = color),
+                      child: Container(
+                        margin: EdgeInsets.only(right: 8),
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: selectedColor == color 
+                              ? Colors.white 
+                              : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    )),
+                  ],
                 ),
               ],
             ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (titleController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Please enter an event title')),
+                  );
+                  return;
+                }
+
+                setState(() {
+                  if (!_scheduleData.containsKey(_selectedDay)) {
+                    _scheduleData[_selectedDay] = [];
+                  }
+                  
+                  _scheduleData[_selectedDay]!.add(ScheduleEvent(
+                    title: titleController.text,
+                    description: descriptionController.text,
+                    startTime: startTime,
+                    endTime: endTime,
+                    color: selectedColor,
+                  ));
+                });
+                
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Event added successfully')),
+                );
+              },
+              child: Text('Add'),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showEventOptions(ScheduleEvent event, int eventIndex) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(event.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.edit, color: primaryColor),
+              title: Text('Edit Event'),
+              onTap: () {
+                Navigator.pop(context);
+                _showEditEventDialog(event, eventIndex);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.delete, color: Colors.red),
+              title: Text('Delete Event'),
+              onTap: () {
+                Navigator.pop(context);
+                _showDeleteConfirmation(eventIndex);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showEditEventDialog(ScheduleEvent event, int eventIndex) async {
+    final titleController = TextEditingController(text: event.title);
+    final descriptionController = TextEditingController(text: event.description);
+    TimeOfDay startTime = event.startTime;
+    TimeOfDay endTime = event.endTime;
+    Color selectedColor = event.color;
+
+    final colors = [
+      Colors.blue,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.red,
+    ];
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: Text('Edit Event'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: InputDecoration(
+                    labelText: 'Event Title',
+                    icon: Icon(Icons.title),
+                  ),
+                ),
+                SizedBox(height: defaultPadding),
+                TextField(
+                  controller: descriptionController,
+                  decoration: InputDecoration(
+                    labelText: 'Description',
+                    icon: Icon(Icons.description),
+                  ),
+                ),
+                SizedBox(height: defaultPadding),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton.icon(
+                        icon: Icon(Icons.access_time),
+                        label: Text(startTime.format(context)),
+                        onPressed: () async {
+                          final time = await showTimePicker(
+                            context: context,
+                            initialTime: startTime,
+                          );
+                          if (time != null) {
+                            setStateDialog(() => startTime = time);
+                          }
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: TextButton.icon(
+                        icon: Icon(Icons.access_time),
+                        label: Text(endTime.format(context)),
+                        onPressed: () async {
+                          final time = await showTimePicker(
+                            context: context,
+                            initialTime: endTime,
+                          );
+                          if (time != null) {
+                            setStateDialog(() => endTime = time);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: defaultPadding),
+                Row(
+                  children: [
+                    Text('Color: '),
+                    SizedBox(width: defaultPadding),
+                    ...colors.map((color) => GestureDetector(
+                      onTap: () => setStateDialog(() => selectedColor = color),
+                      child: Container(
+                        margin: EdgeInsets.only(right: 8),
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: selectedColor == color 
+                              ? Colors.white 
+                              : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    )),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (titleController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Please enter an event title')),
+                  );
+                  return;
+                }
+
+                setState(() {
+                  _scheduleData[_selectedDay]![eventIndex] = ScheduleEvent(
+                    title: titleController.text,
+                    description: descriptionController.text,
+                    startTime: startTime,
+                    endTime: endTime,
+                    color: selectedColor,
+                  );
+                });
+                
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Event updated successfully')),
+                );
+              },
+              child: Text('Update'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(int eventIndex) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete Event'),
+        content: Text('Are you sure you want to delete this event?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text('Cancel'),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
-              // Implement add event logic
+              setState(() {
+                _scheduleData[_selectedDay]!.removeAt(eventIndex);
+                if (_scheduleData[_selectedDay]!.isEmpty) {
+                  _scheduleData.remove(_selectedDay);
+                }
+              });
               Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Event deleted successfully')),
+              );
             },
-            child: Text('Add'),
+            child: Text('Delete'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEventCard(ScheduleEvent event, int index) {
+    return Card(
+      margin: EdgeInsets.only(bottom: defaultPadding),
+      child: ListTile(
+        leading: Container(
+          width: 4,
+          color: event.color,
+        ),
+        title: Text(event.title),
+        subtitle: Text(event.description),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${event.startTime.format(context)} - ${event.endTime.format(context)}',
+            ),
+            IconButton(
+              icon: Icon(Icons.more_vert),
+              onPressed: () => _showEventOptions(event, index),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -212,20 +527,7 @@ class _CalendarPageState extends State<CalendarPage> {
                             itemCount: _scheduleData[_selectedDay]!.length,
                             itemBuilder: (context, index) {
                               final event = _scheduleData[_selectedDay]![index];
-                              return Card(
-                                margin: EdgeInsets.only(bottom: defaultPadding),
-                                child: ListTile(
-                                  leading: Container(
-                                    width: 4,
-                                    color: event.color,
-                                  ),
-                                  title: Text(event.title),
-                                  subtitle: Text(event.description),
-                                  trailing: Text(
-                                    '${event.startTime.format(context)} - ${event.endTime.format(context)}',
-                                  ),
-                                ),
-                              );
+                              return _buildEventCard(event, index);
                             },
                           )
                         : Center(

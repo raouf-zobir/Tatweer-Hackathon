@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/style.dart';
 import '../../providers/auth_provider.dart';
+import 'login_page.dart';  // Add this import
 
 class LogoutPage extends StatelessWidget {
   const LogoutPage({Key? key}) : super(key: key);
@@ -46,16 +47,15 @@ class LogoutPage extends StatelessWidget {
                       ),
                     ),
                     onPressed: () {
+                      // First, call logout on the auth provider
                       context.read<AuthProvider>().logout();
+                      
+                      // Then, navigate to login page and remove all previous routes
                       Navigator.of(context).pushAndRemoveUntil(
                         MaterialPageRoute(
-                          builder: (context) => const Scaffold(
-                            body: Center(
-                              child: Text("Login Page (To be implemented)"),
-                            ),
-                          ),
+                          builder: (context) => const LoginPage(),
                         ),
-                        (route) => false,
+                        (route) => false,  // This removes all previous routes
                       );
                     },
                     child: const Text("Logout"),
@@ -68,9 +68,7 @@ class LogoutPage extends StatelessWidget {
                         vertical: defaultPadding,
                       ),
                     ),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
+                    onPressed: () => Navigator.of(context).pop(),
                     child: const Text("Cancel"),
                   ),
                 ],
