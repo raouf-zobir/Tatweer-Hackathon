@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from src.tools.monitor.event_monitor import EventMonitor
 import time
 from colorama import Fore
+import json
 
 load_dotenv()
 
@@ -177,49 +178,70 @@ async def handle_change_confirmation(agent, changes, issues):
     except Exception as e:
         return f"Error during confirmation: {str(e)}"
 
+async def get_team_contacts(team_name):
+    """Fetch contacts for a specific team"""
+    try:
+        contacts_tool = FetchContactTool(contact_name=team_name)
+        result = contacts_tool.run()
+        if result:
+            # Parse JSON response
+            contacts_data = json.loads(result)
+            if isinstance(contacts_data, list):
+                return contacts_data
+            elif isinstance(contacts_data, dict) and "error" in contacts_data:
+                print(f"Contact fetch message: {contacts_data['error']}")
+    except Exception as e:
+        print(f"Error fetching contacts: {e}")
+    return []
+
 async def apply_approved_changes(changes, summary):
     """Apply approved changes with comprehensive updates"""
     try:
         print("\nApplying changes...")
         
-        # Group all related changes
         all_updates = []
-        notifications = []
+        affected_teams = set()
         
+        # Collect affected teams from changes
         for change in changes:
-            # Update calendar
-            result = await direct_tool_call(CalendarTool, **change)
-            if result:
-                all_updates.append(result)
-            
-            # Handle cascading updates
             if change.get('event_id'):
                 impact = await direct_tool_call(EventMonitor, 
                                               action="analyze_impact",
                                               event_id=change['event_id'])
                 if impact:
-                    # Extract affected events and create updates
-                    affected = [line.strip()[2:] for line in impact.split('\n') if '*' in line]
-                    for affected_event in affected:
-                        update = {
-                            'action': 'edit',
-                            'event_id': affected_event,
-                            'delay_hours': change.get('delay_hours', 0)
-                        }
-                        result = await direct_tool_call(CalendarTool, **update)
-                        if result:
-                            all_updates.append(result)
-
-        # Send comprehensive notification
-        notification = {
-            'action': 'send',
-            'recipient': 'operations_team@company.com',
-            'subject': 'Schedule Updates - Multiple Changes',
-            'body': summary
-        }
-        await direct_tool_call(EmailingTool, **notification)
+                    for line in impact.split('\n'):
+                        if '*' in line:
+                            team = line.strip()[2:].split()[0]  # Extract team name
+                            affected_teams.add(team)
         
-        return f"Successfully applied {len(all_updates)} schedule updates. All affected teams have been notified."
+        # Process calendar updates
+        for change in changes:
+            result = await direct_tool_call(CalendarTool, **change)
+            if result:
+                all_updates.append(result)
+        
+        # Send notifications to each affected team
+        notifications_sent = 0
+        for team in affected_teams:
+            contacts = await get_team_contacts(team)
+            if contacts:
+                for contact in contacts:
+                    if 'emails' in contact and contact['emails']:
+                        for email in contact['emails']:
+                            if email and email != 'N/A':
+                                notification = {
+                                    'action': 'send',
+                                    'recipient_name': contact.get('name', 'Team Member'),
+                                    'recipient': email,
+                                    'subject': f'Schedule Update Notice - {team}',
+                                    'body': f"Dear {contact.get('name', 'Team Member')},\n\n{summary}\n\nBest regards,\nOperations Team"
+                                }
+                                await direct_tool_call(EmailingTool, **notification)
+                                notifications_sent += 1
+            else:
+                print(f"No contacts found for team: {team}")
+        
+        return f"Successfully applied {len(all_updates)} schedule updates. Notifications sent to {notifications_sent} team members."
         
     except Exception as e:
         return f"Error applying changes: {str(e)}"
