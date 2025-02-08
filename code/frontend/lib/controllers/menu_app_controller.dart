@@ -9,10 +9,8 @@ class MenuAppController extends ChangeNotifier {
   DashboardPage get currentPage => _currentPage;
 
   void controlMenu() {
-    if (_scaffoldKey.currentState != null) {
-      if (!_scaffoldKey.currentState!.isDrawerOpen) {
-        _scaffoldKey.currentState!.openDrawer();
-      }
+    if (!_scaffoldKey.currentState!.isDrawerOpen) {
+      _scaffoldKey.currentState!.openDrawer();
     }
   }
 
