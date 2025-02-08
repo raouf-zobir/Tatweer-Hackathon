@@ -45,12 +45,18 @@ class ContactProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> updateContact(Contact contact) async {
+  Future<void> updateContact(Contact oldContact, Contact updatedContact) async {
     try {
-      await _firestore.collection('contacts').doc(contact.id).update(contact.toMap());
-      final index = _contacts.indexWhere((c) => c.id == contact.id);
+      await _firestore.collection('contacts').doc(oldContact.id).update(updatedContact.toMap());
+      final index = _contacts.indexWhere((c) => c.id == oldContact.id);
       if (index != -1) {
-        _contacts[index] = contact;
+        _contacts[index] = Contact(
+          id: oldContact.id,
+          name: updatedContact.name,
+          email: updatedContact.email,
+          phone: updatedContact.phone,
+          type: updatedContact.type,
+        );
         notifyListeners();
       }
     } catch (e) {

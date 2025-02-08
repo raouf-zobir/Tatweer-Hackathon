@@ -1,22 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../constants/style.dart';
 import '../../components/page_title.dart';
 import '../../providers/contact_provider.dart';
 import '../../models/contact.dart';
-
-class Contact {
-  final String name;
-  final String email;
-  final String phone;
-  final String type;
-
-  Contact({
-    required this.name,
-    required this.email,
-    required this.phone,
-    required this.type,
-  });
-}
+import '../../models/message.dart';
+import '../../utils/validators.dart';
 
 class ContactPage extends StatefulWidget {
   const ContactPage({Key? key}) : super(key: key);
@@ -50,20 +40,7 @@ class _ContactPageState extends State<ContactPage> with SingleTickerProviderStat
               title: "Contacts",
               subtitle: "Manage your business contacts and communications",
               icon: Icons.contact_page_outlined,
-              actions: [
-                ElevatedButton.icon(
-                  icon: Icon(Icons.person_add),
-                  label: Text("New Contact"),
-                  onPressed: () => _showAddContactDialog("Supplier"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: defaultPadding,
-                      vertical: defaultPadding / 2,
-                    ),
-                  ),
-                ),
-              ],
+              // Removed the actions parameter to remove the first Add button
             ),
             SizedBox(height: defaultPadding),
             Container(
@@ -149,6 +126,7 @@ class _ContactPageState extends State<ContactPage> with SingleTickerProviderStat
   }
 
   void _showAddContactDialog(String type) {
+    final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
     final emailController = TextEditingController();
     final phoneController = TextEditingController();
@@ -157,31 +135,44 @@ class _ContactPageState extends State<ContactPage> with SingleTickerProviderStat
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Add New $type'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                icon: Icon(Icons.person),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  icon: Icon(Icons.person),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Name is required';
+                  }
+                  return null;
+                },
               ),
-            ),
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                icon: Icon(Icons.email),
+              TextFormField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  icon: Icon(Icons.email),
+                  hintText: 'example@domain.com',
+                ),
+                validator: Validators.validateEmail,
               ),
-            ),
-            TextField(
-              controller: phoneController,
-              decoration: const InputDecoration(
-                labelText: 'Phone',
-                icon: Icon(Icons.phone),
+              TextFormField(
+                controller: phoneController,
+                decoration: const InputDecoration(
+                  labelText: 'Phone',
+                  icon: Icon(Icons.phone),
+                  hintText: '+1234567890',
+                ),
+                validator: Validators.validatePhone,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -190,22 +181,24 @@ class _ContactPageState extends State<ContactPage> with SingleTickerProviderStat
           ),
           ElevatedButton(
             onPressed: () async {
-              try {
-                final newContact = Contact(
-                  name: nameController.text,
-                  email: emailController.text,
-                  phone: phoneController.text,
-                  type: type,
-                );
-                await context.read<ContactProvider>().addContact(newContact);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Contact added successfully')),
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error adding contact: $e')),
-                );
+              if (formKey.currentState?.validate() ?? false) {
+                try {
+                  final newContact = Contact(
+                    name: nameController.text,
+                    email: emailController.text,
+                    phone: phoneController.text,
+                    type: type,
+                  );
+                  await context.read<ContactProvider>().addContact(newContact);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Contact added successfully')),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error adding contact: $e')),
+                  );
+                }
               }
             },
             child: const Text('Add'),
@@ -216,6 +209,7 @@ class _ContactPageState extends State<ContactPage> with SingleTickerProviderStat
   }
 
   void _showEditContactDialog(Contact contact) {
+    final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: contact.name);
     final emailController = TextEditingController(text: contact.email);
     final phoneController = TextEditingController(text: contact.phone);
@@ -224,31 +218,44 @@ class _ContactPageState extends State<ContactPage> with SingleTickerProviderStat
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Edit Contact'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                icon: Icon(Icons.person),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  icon: Icon(Icons.person),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Name is required';
+                  }
+                  return null;
+                },
               ),
-            ),
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                icon: Icon(Icons.email),
+              TextFormField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  icon: Icon(Icons.email),
+                  hintText: 'example@domain.com',
+                ),
+                validator: Validators.validateEmail,
               ),
-            ),
-            TextField(
-              controller: phoneController,
-              decoration: const InputDecoration(
-                labelText: 'Phone',
-                icon: Icon(Icons.phone),
+              TextFormField(
+                controller: phoneController,
+                decoration: const InputDecoration(
+                  labelText: 'Phone',
+                  icon: Icon(Icons.phone),
+                  hintText: '+1234567890',
+                ),
+                validator: Validators.validatePhone,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -256,17 +263,26 @@ class _ContactPageState extends State<ContactPage> with SingleTickerProviderStat
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                final index = _contacts.indexOf(contact);
-                _contacts[index] = Contact(
-                  name: nameController.text,
-                  email: emailController.text,
-                  phone: phoneController.text,
-                  type: contact.type,
-                );
-              });
-              Navigator.pop(context);
+            onPressed: () async {
+              if (formKey.currentState?.validate() ?? false) {
+                try {
+                  final updatedContact = Contact(
+                    name: nameController.text,
+                    email: emailController.text,
+                    phone: phoneController.text,
+                    type: contact.type,
+                  );
+                  await context.read<ContactProvider>().updateContact(contact, updatedContact);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Contact updated successfully')),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error updating contact: $e')),
+                  );
+                }
+              }
             },
             child: const Text('Save'),
           ),
@@ -288,11 +304,24 @@ class _ContactPageState extends State<ContactPage> with SingleTickerProviderStat
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              setState(() {
-                _contacts.remove(contact);
-              });
-              Navigator.pop(context);
+            onPressed: () async {
+              try {
+                await context.read<ContactProvider>().deleteContact(contact.id);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Contact deleted successfully'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error deleting contact: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             child: const Text('Delete'),
           ),
@@ -311,12 +340,18 @@ class _ContactPageState extends State<ContactPage> with SingleTickerProviderStat
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              leading: Icon(Icons.email),
+              title: Text('Send to: ${contact.email}'),
+            ),
+            SizedBox(height: defaultPadding),
             TextField(
               controller: messageController,
               maxLines: 3,
               decoration: const InputDecoration(
                 labelText: 'Message',
-                icon: Icon(Icons.message),
+                border: OutlineInputBorder(),
+                hintText: 'Enter your message here...',
               ),
             ),
           ],
@@ -327,15 +362,90 @@ class _ContactPageState extends State<ContactPage> with SingleTickerProviderStat
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Message sent to ${contact.name}')),
-              );
+            onPressed: () async {
+              if (messageController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Please enter a message')),
+                );
+                return;
+              }
+
+              try {
+                final message = Message(
+                  toContactId: contact.id,
+                  toName: contact.name,
+                  toEmail: contact.email,
+                  content: messageController.text.trim(),
+                );
+
+                // Save to Firebase
+                await FirebaseFirestore.instance
+                    .collection('messages')
+                    .add(message.toMap());
+
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Message sent to ${contact.name}'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error sending message: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             child: const Text('Send'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildContactCard(Contact contact) {
+    return Card(
+      margin: EdgeInsets.symmetric(horizontal: defaultPadding, vertical: defaultPadding / 2),
+      child: ListTile(
+        leading: CircleAvatar(
+          child: Text(contact.name[0].toUpperCase()),
+        ),
+        title: Text(contact.name),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(contact.email),
+            Text(contact.phone),
+          ],
+        ),
+        trailing: PopupMenuButton(
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              child: ListTile(
+                leading: Icon(Icons.edit),
+                title: Text('Edit'),
+              ),
+              onTap: () => _showEditContactDialog(contact),
+            ),
+            PopupMenuItem(
+              child: ListTile(
+                leading: Icon(Icons.delete),
+                title: Text('Delete'),
+              ),
+              onTap: () => _deleteContact(contact),
+            ),
+            PopupMenuItem(
+              child: ListTile(
+                leading: Icon(Icons.message),
+                title: Text('Message'),
+              ),
+              onTap: () => _showContactForm(context, contact),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,29 +1,54 @@
 import 'package:flutter/material.dart';
-import '../models/dashboard_model.dart';
-import '../services/dashboard_service.dart';
-
-enum TimeRange { day, week, month }
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/dashboard_stats.dart';
 
 class DashboardProvider extends ChangeNotifier {
-  final DashboardService _service = DashboardService();
-  DashboardData? _dashboardData;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  DashboardStats? _stats;
   bool _isLoading = false;
-  TimeRange _selectedTimeRange = TimeRange.day;
+  dynamic dashboardData;
 
-  DashboardData? get dashboardData => _dashboardData;
+  DashboardStats? get stats => _stats;
   bool get isLoading => _isLoading;
-  TimeRange get selectedTimeRange => _selectedTimeRange;
 
-  // New: time frame state and data
-  String _currentTimeFrame = 'day';
-  String get currentTimeFrame => _currentTimeFrame;
+  Future<void> loadStats() async {
+    _isLoading = true;
+    notifyListeners();
 
-  dynamic _data;
-  dynamic get data => _data;
-
-  DashboardProvider() {
-    // Initialize data for default time frame
-    fetchDataForTimeFrame();
+    try {
+      final snapshot = await _firestore.collection('dashboard_stats').doc('current').get();
+      
+      if (snapshot.exists) {
+        _stats = DashboardStats.fromFirestore(snapshot);
+        dashboardData = snapshot.data();
+      } else {
+        // Initialize with default values if no data exists
+        _stats = DashboardStats(
+          inTransit: 0,
+          delivered: 0,
+          returned: 0,
+          pending: 0,
+          revenue: 0,
+          monthlyDeliveries: [
+            ChartData(month: 'Jan', deliveries: 0, returns: 0),
+            ChartData(month: 'Feb', deliveries: 0, returns: 0),
+            ChartData(month: 'Mar', deliveries: 0, returns: 0),
+            ChartData(month: 'Apr', deliveries: 0, returns: 0),
+            ChartData(month: 'May', deliveries: 0, returns: 0),
+            ChartData(month: 'Jun', deliveries: 0, returns: 0),
+          ],
+        );
+        // Save default values to Firebase
+        await _firestore.collection('dashboard_stats').doc('current').set(_stats!.toMap());
+        dashboardData = _stats!.toMap();
+      }
+    } catch (e) {
+      print('Error loading dashboard stats: $e');
+      throw e;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> loadDashboardData() async {
@@ -31,70 +56,14 @@ class DashboardProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _dashboardData = await _service.getDashboardData();
+      await loadStats(); // Reuse existing loadStats method
+      // Additional dashboard data loading can be added here
     } catch (e) {
-      debugPrint('Error loading dashboard data: $e');
-    }
-
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  bool _isTransitioning = false;
-  bool get isTransitioning => _isTransitioning;
-
-  Future<void> setTimeRange(TimeRange range) async {
-    if (_selectedTimeRange == range) return;
-    
-    // Start transition
-    _isTransitioning = true;
-    notifyListeners();
-
-    // Wait for fade out
-    await Future.delayed(const Duration(milliseconds: 300));
-    
-    _selectedTimeRange = range;
-    await refreshDashboardData();
-    
-    // End transition
-    _isTransitioning = false;
-    notifyListeners();
-  }
-
-  Future<void> refreshDashboardData() async {
-    // Update this method to fetch data based on _selectedTimeRange
-    // Example:
-    switch (_selectedTimeRange) {
-      case TimeRange.day:
-        // Fetch daily data
-        break;
-      case TimeRange.week:
-        // Fetch weekly data
-        break;
-      case TimeRange.month:
-        // Fetch monthly data
-        break;
-    }
-  }
-
-  // New: method to update time frame and refresh data
-  void updateTimeFrame(String newTimeFrame) {
-    if (_currentTimeFrame != newTimeFrame) {
-      _currentTimeFrame = newTimeFrame;
-      fetchDataForTimeFrame();
+      print('Error loading dashboard data: $e');
+      throw e;
+    } finally {
+      _isLoading = false;
       notifyListeners();
-    }
-  }
-
-  // New: dummy method to simulate fetching data based on current time frame
-  void fetchDataForTimeFrame() {
-    // Replace this logic with your actual data fetching implementation.
-    if (_currentTimeFrame == 'day') {
-      _data = 'Day data';
-    } else if (_currentTimeFrame == 'week') {
-      _data = 'Week data';
-    } else if (_currentTimeFrame == 'month') {
-      _data = 'Month data';
     }
   }
 }
