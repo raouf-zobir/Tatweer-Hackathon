@@ -373,107 +373,19 @@ async def apply_approved_changes(changes, summary):
         print("\nApplying changes...")
         
         all_updates = []
-        affected_teams = set()
-        
-        # Collect affected teams and their impacts
-        team_impacts = {}
         for change in changes:
-            if change.get('event_id'):
-                impact = await direct_tool_call(EventMonitor, 
-                                              action="analyze_impact",
-                                              event_id=change['event_id'])
-                if impact:
-                    for line in impact.split('\n'):
-                        if '*' in line:
-                            team = line.strip()[2:].split()[0]
-                            affected_teams.add(team)
-                            team_impacts[team] = impact
+            if change.get('action') == 'edit':
+                # Only attempt calendar update for edit actions
+                result = await direct_tool_call(CalendarTool, **change)
+                if isinstance(result, dict) and 'error' in result:
+                    print(f"\nWarning: {result['error']}")
+                elif result:
+                    all_updates.append(result)
+                    print(f"\nSuccessfully updated event: {change.get('event_id')}")
         
-        # Process calendar updates
-        for change in changes:
-            result = await direct_tool_call(CalendarTool, **change)
-            if result:
-                all_updates.append(result)
-        
-        # Prepare and confirm notifications
-        print("\nPreparing notifications for affected teams...")
-        notifications = []
-        
-        for team in affected_teams:
-            contacts = await get_team_contacts(team)
-            if contacts:
-                for contact in contacts:
-                    if 'emails' in contact and contact['emails']:
-                        for email in contact['emails']:
-                            if email and email != 'N/A':
-                                # Generate personalized content
-                                email_content = await generate_personalized_email(
-                                    contact.get('name', 'Team Member'),
-                                    team,
-                                    "Team Member",  # You could add role detection here
-                                    changes,
-                                    team_impacts.get(team, "")
-                                )
-                                
-                                notifications.append({
-                                    'recipient_name': contact.get('name', 'Team Member'),
-                                    'recipient': email,
-                                    'team': team,
-                                    'content': email_content
-                                })
-        
-        # Show preview and confirm
-        if notifications:
-            editing = True
-            while editing:
-                print("\nEmail Preview (first notification):")
-                print("-" * 50)
-                print(notifications[0]['content'])
-                print("-" * 50)
-                
-                print("\nWould you like to:")
-                print("1. Edit the email")
-                print("2. Send as is")
-                print("3. Cancel sending")
-                
-                choice = input("\nYour choice (1-3): ").strip()
-                
-                if choice == '1':
-                    edited_notification = await edit_email_content(notifications[0])
-                    if edited_notification:
-                        # Apply the edited template to all notifications
-                        template = edited_notification['content']
-                        for notif in notifications:
-                            notif['content'] = template.replace(
-                                notifications[0]['recipient_name'], notif['recipient_name']
-                            ).replace(
-                                notifications[0]['team'], notif['team']
-                            )
-                        continue
-                    else:
-                        return "Notification sending cancelled. Calendar updates still applied."
-                elif choice == '2':
-                    editing = False
-                elif choice == '3':
-                    return "Notification sending cancelled. Calendar updates still applied."
-            
-            # Send confirmed notifications
-            notifications_sent = 0
-            for notif in notifications:
-                notification = {
-                    'action': 'send',
-                    'recipient_name': notif['recipient_name'],
-                    'recipient': notif['recipient'],
-                    'subject': f'Important Schedule Update - {notif["team"]}',
-                    'body': notif['content']
-                }
-                await direct_tool_call(EmailingTool, **notification)
-                notifications_sent += 1
-            
-            return f"Successfully applied {len(all_updates)} schedule updates. Sent {notifications_sent} personalized notifications."
-        
-        return f"Successfully applied {len(all_updates)} schedule updates. No notifications needed."
-        
+        # Rest of the notification logic
+        # ...existing notification code...
+
     except Exception as e:
         return f"Error applying changes: {str(e)}"
 

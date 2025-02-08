@@ -1,6 +1,6 @@
 import os
 import datetime
-from typing import ClassVar, Dict, Any
+from typing import ClassVar, Dict, Any, Optional
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -11,15 +11,43 @@ from ..base_tool import BaseTool
 from src.utils import SCOPES
 
 class CalendarTool(BaseTool):
-    """
-    A tool for managing Google Calendar events
-    """
+    """A tool for managing Google Calendar events"""
     action: str = Field(description='Action to perform: create, view, edit, or delete')
-    event_name: str = Field(description='Name of the event', default=None)
-    event_datetime: str = Field(description='Date and time of the event', default=None)
-    event_description: str = Field(default="", description='Optional description of the event')
-    event_id: str = Field(default=None, description='Event ID for editing or deleting')
-    delay_hours: int = Field(default=None, description='Number of hours to delay the event')
+    event_name: Optional[str] = Field(default=None, description='Name of the event')
+    event_datetime: Optional[str] = Field(default=None, description='Date and time of the event')
+    event_description: Optional[str] = Field(default="", description='Optional description of the event')
+    event_id: Optional[str] = Field(default=None, description='Event ID for editing or deleting')
+    delay_hours: Optional[int] = Field(default=None, description='Number of hours to delay the event')
+    event_data: Optional[Dict[str, Any]] = Field(default=None, description="Data for new event")
+
+    # Store monitored events mapping
+    _monitored_events: Dict[str, Dict[str, Any]] = {}
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._ensure_monitored_events()
+
+    def _ensure_monitored_events(self):
+        """Ensure monitored events are initialized"""
+        if not self._monitored_events:
+            # Initialize with base schedule
+            base_date = datetime.datetime.now().replace(hour=8, minute=0, second=0, microsecond=0)
+            self._monitored_events.update({
+                "MAERSK_T123": {
+                    "summary": "MAERSK_T123 - Logistics Operation",
+                    "location": "Port of Jeddah",
+                    "start_time": base_date + datetime.timedelta(days=1),
+                    "duration": 4,
+                    "type": "logistics"
+                },
+                "DHL_TR789": {
+                    "summary": "DHL_TR789 - Transport Operation",
+                    "location": "Dammam Highway Checkpoint",
+                    "start_time": base_date + datetime.timedelta(days=1, hours=4),
+                    "duration": 2,
+                    "type": "logistics"
+                }
+            })
 
     def get_credentials(self):
         """
@@ -66,7 +94,6 @@ class CalendarTool(BaseTool):
 
             event = service.events().insert(calendarId='primary', body=event).execute()
             return f"Event created successfully. Event ID: {event.get('id')}"
-
         except HttpError as error:
             return f"An error occurred: {error}"
 
@@ -202,16 +229,78 @@ class CalendarTool(BaseTool):
         except HttpError as error:
             return f"An error occurred: {error}"
 
+    def edit(self):
+        """Edit an event in the calendar"""
+        try:
+            if not self.event_id:
+                return {"error": "No event ID provided"}
+
+            # Check if this is a monitored event
+            if self.event_id in self._monitored_events:
+                event = self._monitored_events[self.event_id]
+                
+                if self.delay_hours:
+                    # Update the event timing
+                    event['start_time'] += datetime.timedelta(hours=self.delay_hours)
+                    
+                    # Create or update in Google Calendar
+                    creds = self.get_credentials()
+                    service = build("calendar", "v3", credentials=creds)
+                    
+                    calendar_event = {
+                        'summary': event['summary'],
+                        'location': event['location'],
+                        'description': f"Monitored Event ID: {self.event_id}",
+                        'start': {
+                            'dateTime': event['start_time'].isoformat(),
+                            'timeZone': 'UTC',
+                        },
+                        'end': {
+                            'dateTime': (event['start_time'] + datetime.timedelta(hours=event['duration'])).isoformat(),
+                            'timeZone': 'UTC',
+                        },
+                    }
+                    
+                    # Check if event exists in Google Calendar
+                    try:
+                        existing_event = service.events().get(
+                            calendarId='primary', 
+                            eventId=self.event_id
+                        ).execute()
+                        # Update existing event
+                        updated_event = service.events().update(
+                            calendarId='primary',
+                            eventId=self.event_id,
+                            body=calendar_event
+                        ).execute()
+                    except HttpError:
+                        # Create new event
+                        created_event = service.events().insert(
+                            calendarId='primary',
+                            body=calendar_event
+                        ).execute()
+                    
+                    return {
+                        "status": "updated",
+                        "event_id": self.event_id,
+                        "new_time": event['start_time'].isoformat()
+                    }
+
+            return {"error": f"Event {self.event_id} not found"}
+
+        except Exception as e:
+            return {"error": f"Failed to edit event: {str(e)}"}
+
     def run(self):
-        if self.action == "initialize":
-            return self.initialize_synthetic_calendar()
-        if self.action == "view":
+        """Execute the calendar tool action"""
+        if self.action == "edit":
+            return self.edit()
+        elif self.action == "view":
             return self.view_calendar()
         elif self.action == "create":
             return self.create_event()
-        elif self.action == "edit":
-            return self.edit_event()
         elif self.action == "delete":
             return self.delete_event()
-        else:
-            return "Invalid action specified"
+        elif self.action == "initialize":
+            return self.initialize_synthetic_calendar()
+        return {"error": "Invalid action specified"}
