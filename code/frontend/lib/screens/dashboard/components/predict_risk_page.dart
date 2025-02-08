@@ -7,12 +7,12 @@ import '../../../components/header.dart';
 import '../../../utils/responsive.dart';
 import '../../../components/page_header.dart';
 import '../../../components/page_title.dart';
+// import '../../../constants/api_config.dart';
 
 class PredictRiskPage extends StatefulWidget {
   @override
   _PredictRiskPageState createState() => _PredictRiskPageState();
 }
-
 class _PredictRiskPageState extends State<PredictRiskPage> {
   final _formKey = GlobalKey<FormState>();
   bool? _predictionResult;

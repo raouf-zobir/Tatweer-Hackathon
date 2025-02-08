@@ -5,9 +5,19 @@ import numpy as np
 import xgboost as xgb
 import pandas as pd
 import os
+from fastapi.middleware.cors import CORSMiddleware
 
 # Initialize FastAPI
 app = FastAPI()
+
+# Add CORS middleware configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origin
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Get the current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -46,7 +56,7 @@ async def predict(data: InputData):
 
         # Encode categorical data and scale numerical data
         X_categorical = encoder.transform(input_data[["Weather Condition", "Traffic Level", "Vehicle Type", "Goods Type"]])
-        X_numerical = scaler.transform(input_data[["Distance (km)", "Driver Experience (years)", "Loading Weight (kg)", "Year of Vehicle"]])
+        X_numerical = scaler.transinform(input_data[["Distance (km)", "Driver Experience (years)", "Loading Weight (kg)", "Year of Vehicle"]])
         X = np.hstack((X_categorical, X_numerical))
 
         # Make predictions
