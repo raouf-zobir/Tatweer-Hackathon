@@ -14,6 +14,13 @@ An intelligent supply chain management solution powered by LLaMA-70B that provid
 - Automated stakeholder notification system
 - Human-in-the-loop confirmation for critical decisions
 ![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot_35.png)
+
+
+![Screenshot 1]((https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot%202025-02-08%20225520.png))
+
+
+![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot%202025-02-08%20225431.png)
+
 ### Real-Time Monitoring Capabilities
 - Multi-facility monitoring (Ports, Factories, Distribution Centers)
 - Real-time tracking of:
@@ -37,10 +44,6 @@ An intelligent supply chain management solution powered by LLaMA-70B that provid
 - Coordinated response planning
 ![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot_36.png)
 
-![Screenshot 1]([https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot_36.png](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot%202025-02-08%20225520.png))
-
-
-![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot%202025-02-08%20225431.png)
 
 ## Example Operation
 ```
