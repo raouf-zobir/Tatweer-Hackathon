@@ -9,13 +9,7 @@ class GalleryPage extends StatefulWidget {
 }
 
 class _GalleryPageState extends State<GalleryPage> {
-  final List<String> demoImages = [
-    'assets/images/delivery1.jpg',
-    'assets/images/warehouse1.jpg',
-    'assets/images/truck1.jpg',
-    'assets/images/logistics1.jpg',
-    // Add more image paths
-  ];
+  final List<String> images = []; // Empty list instead of demo images
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +27,6 @@ class _GalleryPageState extends State<GalleryPage> {
                   icon: Icon(Icons.add_photo_alternate),
                   tooltip: 'Add Image',
                   onPressed: () {
-                    // Add image functionality
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Upload functionality coming soon')),
                     );
@@ -56,42 +49,65 @@ class _GalleryPageState extends State<GalleryPage> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   SizedBox(height: defaultPadding),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: Responsive.isMobile(context) ? 2 : 4,
-                      crossAxisSpacing: defaultPadding,
-                      mainAxisSpacing: defaultPadding,
-                      childAspectRatio: 1,
-                    ),
-                    itemCount: demoImages.length,
-                    itemBuilder: (context, index) {
-                      return GestureDetector(
-                        onTap: () => _showImageDialog(context, demoImages[index]),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey[900],
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: [
-                              BoxShadow(
-                                offset: Offset(0, 4),
-                                blurRadius: 10,
-                                color: Colors.black.withOpacity(0.2),
+                  images.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.image_not_supported,
+                                size: 64,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(height: defaultPadding),
+                              Text(
+                                "No images available",
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                              SizedBox(height: defaultPadding / 2),
+                              Text(
+                                "Click the + button to add images",
+                                style: TextStyle(color: Colors.grey[600]),
                               ),
                             ],
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.asset(
-                              demoImages[index],
-                              fit: BoxFit.cover,
-                            ),
+                        )
+                      : GridView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: Responsive.isMobile(context) ? 2 : 4,
+                            crossAxisSpacing: defaultPadding,
+                            mainAxisSpacing: defaultPadding,
+                            childAspectRatio: 1,
                           ),
+                          itemCount: images.length,
+                          itemBuilder: (context, index) {
+                            return GestureDetector(
+                              onTap: () => _showImageDialog(context, images[index]),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[900],
+                                  borderRadius: BorderRadius.circular(10),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      offset: Offset(0, 4),
+                                      blurRadius: 10,
+                                      color: Colors.black.withOpacity(0.2),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.asset(
+                                    images[index],
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ],
               ),
             ),

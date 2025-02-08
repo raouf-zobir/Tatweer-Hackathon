@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/menu_app_controller.dart';
-import '../../utils/responsive.dart';
+import '../../utils/responsive.dart';  // Add this import
 import '../../components/side_menu.dart';
 import '../pages/page_container.dart';
 
@@ -22,8 +22,10 @@ class MainScreen extends StatelessWidget {
               ),
             Expanded(
               flex: 5,
-              child: PageContainer(
-                currentPage: context.watch<MenuAppController>().currentPage,
+              child: Consumer<MenuAppController>(
+                builder: (context, controller, _) => PageContainer(
+                  currentPage: controller.currentPage,
+                ),
               ),
             ),
           ],
