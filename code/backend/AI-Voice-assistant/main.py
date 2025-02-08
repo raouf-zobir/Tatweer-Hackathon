@@ -40,8 +40,8 @@ class ResponseAccumulator:
     def clear(self):
         self.response = ""
 
-async def handle_command(agent, command):
-    """Handle natural language input from user"""
+async def handle_command(agent, command, conversation_context="", conversation_manager=None):
+    """Handle natural language input from user with conversation context"""
     max_retries = 3
     retry_delay = 20
     
@@ -49,8 +49,10 @@ async def handle_command(agent, command):
         try:
             # Enhance command with context for better understanding
             enhanced_command = (
+                f"Previous conversation:\n{conversation_context}\n\n"
+                f"Current context: {conversation_manager.context if conversation_manager else {}}\n\n"
                 f"User input: '{command}'\n"
-                f"Based on this input, understand the user's intent and:\n"
+                f"Based on this input and previous context, understand the user's intent and:\n"
                 f"1. Determine if this requires any operational actions\n"
                 f"2. If yes, execute appropriate tools and provide results\n"
                 f"3. If no, provide a natural conversational response\n"
@@ -163,8 +165,8 @@ async def generate_comprehensive_summary(calendar_status, issues, proposed_chang
 
     return summary
 
-async def handle_change_confirmation(agent, changes, issues):
-    """Handle change proposals through websocket communication"""
+async def handle_change_confirmation(agent, changes, issues, conversation_manager=None):
+    """Handle change proposals with conversation context"""
     try:
         # Get current calendar status
         calendar_status = await direct_tool_call(CalendarTool, action="view")
@@ -172,7 +174,10 @@ async def handle_change_confirmation(agent, changes, issues):
         # Generate comprehensive summary
         summary = await generate_comprehensive_summary(calendar_status, issues, changes)
         
-        # Return the summary as a response to be sent via websocket
+        if conversation_manager:
+            conversation_manager.update_context('pending_changes', changes)
+            conversation_manager.update_context('current_issues', issues)
+        
         return {
             "type": "change_proposal",
             "message": summary,
