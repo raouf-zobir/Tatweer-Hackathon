@@ -37,20 +37,32 @@ class _CalendarPageState extends State<CalendarPage> {
     try {
       print('Saving event to weekly schedule...');
       
-      final docRef = await _firestore
+      final dayDoc = _firestore
           .collection('weekly_schedule')
-          .doc(_selectedDay.toString())
-          .collection('events')
-          .add({
-        'title': event.title,
-        'description': event.description,
-        'startTime': '${event.startTime.hour}:${event.startTime.minute}',
-        'endTime': '${event.endTime.hour}:${event.endTime.minute}',
-        'color': event.color.value,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+          .doc(_selectedDay.toString());
 
-      print('Event saved with ID: ${docRef.id}');
+      Map<String, dynamic> eventData = {
+        'events': FieldValue.arrayUnion([{
+          'title': event.title,
+          'description': event.description,
+          'startTime': '${event.startTime.hour}:${event.startTime.minute}',
+          'endTime': '${event.endTime.hour}:${event.endTime.minute}',
+          'color': event.color.value,
+          'timestamp': DateTime.now().toIso8601String(),
+        }]),
+        'lastUpdated': FieldValue.serverTimestamp(),
+      };
+
+      // Get the document snapshot
+      final docSnapshot = await dayDoc.get();
+
+      if (!docSnapshot.exists) {
+        // Create new document for this day
+        await dayDoc.set(eventData);
+      } else {
+        // Update existing document
+        await dayDoc.update(eventData);
+      }
 
       // Update local state
       if (!_scheduleData.containsKey(_selectedDay)) {
@@ -86,22 +98,22 @@ class _CalendarPageState extends State<CalendarPage> {
 
       // Load events for all days
       for (int day = 0; day < 7; day++) {
-        final snapshot = await _firestore
+        final docSnapshot = await _firestore
             .collection('weekly_schedule')
             .doc(day.toString())
-            .collection('events')
-            .orderBy('createdAt')
             .get();
 
-        if (snapshot.docs.isNotEmpty) {
-          _scheduleData[day] = snapshot.docs.map((doc) {
-            final data = doc.data();
-            final startTimeParts = data['startTime'].split(':');
-            final endTimeParts = data['endTime'].split(':');
+        if (docSnapshot.exists) {
+          final data = docSnapshot.data();
+          final events = data?['events'] as List<dynamic>? ?? [];
 
-            return ScheduleEvent(
-              title: data['title'],
-              description: data['description'],
+          for (var eventData in events) {
+            final startTimeParts = eventData['startTime'].split(':');
+            final endTimeParts = eventData['endTime'].split(':');
+
+            final event = ScheduleEvent(
+              title: eventData['title'],
+              description: eventData['description'],
               startTime: TimeOfDay(
                 hour: int.parse(startTimeParts[0]),
                 minute: int.parse(startTimeParts[1]),
@@ -110,9 +122,14 @@ class _CalendarPageState extends State<CalendarPage> {
                 hour: int.parse(endTimeParts[0]),
                 minute: int.parse(endTimeParts[1]),
               ),
-              color: Color(data['color']),
+              color: Color(eventData['color']),
             );
-          }).toList();
+
+            if (!_scheduleData.containsKey(day)) {
+              _scheduleData[day] = [];
+            }
+            _scheduleData[day]!.add(event);
+          }
         }
       }
 
@@ -403,7 +420,7 @@ class _CalendarPageState extends State<CalendarPage> {
               child: Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (titleController.text.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Please enter an event title')),
@@ -411,20 +428,57 @@ class _CalendarPageState extends State<CalendarPage> {
                   return;
                 }
 
-                setState(() {
-                  _scheduleData[_selectedDay]![eventIndex] = ScheduleEvent(
-                    title: titleController.text,
-                    description: descriptionController.text,
-                    startTime: startTime,
-                    endTime: endTime,
-                    color: selectedColor,
+                try {
+                  // Get the document reference
+                  final dayDoc = _firestore
+                      .collection('weekly_schedule')
+                      .doc(_selectedDay.toString());
+                  
+                  // Get current events
+                  final docSnapshot = await dayDoc.get();
+                  final data = docSnapshot.data();
+                  final events = List<Map<String, dynamic>>.from(data?['events'] ?? []);
+                  
+                  // Update the specific event
+                  events[eventIndex] = {
+                    'title': titleController.text,
+                    'description': descriptionController.text,
+                    'startTime': '${startTime.hour}:${startTime.minute}',
+                    'endTime': '${endTime.hour}:${endTime.minute}',
+                    'color': selectedColor.value,
+                    'timestamp': DateTime.now().toIso8601String(),
+                  };
+
+                  // Update Firebase
+                  await dayDoc.update({
+                    'events': events,
+                    'lastUpdated': FieldValue.serverTimestamp(),
+                  });
+
+                  // Update local state
+                  setState(() {
+                    _scheduleData[_selectedDay]![eventIndex] = ScheduleEvent(
+                      title: titleController.text,
+                      description: descriptionController.text,
+                      startTime: startTime,
+                      endTime: endTime,
+                      color: selectedColor,
+                    );
+                  });
+                  
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Event updated successfully')),
                   );
-                });
-                
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Event updated successfully')),
-                );
+                } catch (e) {
+                  print('Error updating event: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error updating event: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               },
               child: Text('Update'),
             ),
@@ -438,14 +492,24 @@ class _CalendarPageState extends State<CalendarPage> {
     try {
       print('Deleting event from Firebase...');
       
-      final snapshot = await _firestore
+      final dayDoc = _firestore
           .collection('weekly_schedule')
-          .doc(dayIndex.toString())
-          .collection('events')
-          .get();
+          .doc(dayIndex.toString());
+      
+      final docSnapshot = await dayDoc.get();
 
-      if (snapshot.docs.length > eventIndex) {
-        await snapshot.docs[eventIndex].reference.delete();
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
+        final events = List<Map<String, dynamic>>.from(data?['events'] ?? []);
+        
+        // Remove the specific event
+        events.removeAt(eventIndex);
+
+        // Update document with new events array
+        await dayDoc.update({
+          'events': events,
+          'lastUpdated': FieldValue.serverTimestamp(),
+        });
         
         setState(() {
           _scheduleData[dayIndex]!.removeAt(eventIndex);
