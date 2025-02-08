@@ -8,6 +8,7 @@ import 'terms_page.dart';
 import 'settings_page.dart';
 import 'contact_page.dart';
 import 'calendar_page.dart';
+import '../dashboard/components/predict_risk_page.dart';
 
 class PageContainer extends StatelessWidget {
   final DashboardPage currentPage;
@@ -42,6 +43,8 @@ class PageContainer extends StatelessWidget {
         return const SettingsPage();
       case DashboardPage.logout:
         return const LogoutPage();
+      case DashboardPage.predict:
+        return PredictRiskPage();
       default:
         return ResponsivePage(title: page.toString().split('.').last);
     }

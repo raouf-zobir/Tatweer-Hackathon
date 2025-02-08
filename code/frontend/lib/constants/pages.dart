@@ -1,5 +1,8 @@
+import 'package:flutter/material.dart';
+
 enum DashboardPage {
   dashboard,
+  predict,  // Added predict page
   products,
   inbox,
   orderLists,
@@ -7,5 +10,5 @@ enum DashboardPage {
   calendar,
   contact,
   settings,
-  logout
+  logout,
 }
