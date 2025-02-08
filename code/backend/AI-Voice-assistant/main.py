@@ -368,85 +368,65 @@ async def edit_email_content(email_data):
         print("\nEmail updated. Review the changes?")
 
 async def apply_approved_changes(changes, summary):
-    """Apply approved changes with comprehensive updates"""
     try:
         print("\nApplying changes...")
         
-        all_updates = []
+        # Batch all calendar updates together
+        calendar_updates = []
         affected_teams = set()
         team_impacts = {}
         
-        # First, synchronize calendar events
-        calendar_init = await direct_tool_call(CalendarTool, action="initialize")
-        print("\nSynchronizing calendar...")
-        
-        # Apply changes
         for change in changes:
             if change.get('action') == 'edit':
-                result = await direct_tool_call(CalendarTool, **change)
-                if isinstance(result, dict):
-                    if 'error' in result:
-                        print(f"\nWarning: {result['error']}")
-                    else:
-                        all_updates.append(result)
-                        print(f"\nSuccessfully updated event: {change.get('event_id')}")
-                        
-                        # Get impact info for notifications
-                        impact = await direct_tool_call(EventMonitor, 
-                                                      action="analyze_impact",
-                                                      event_id=change.get('event_id'))
-                        if impact:
-                            for line in impact.split('\n'):
-                                if '*' in line:
-                                    team = line.strip()[2:].split()[0]
-                                    affected_teams.add(team)
-                                    team_impacts[team] = impact
+                calendar_updates.append({
+                    'event_id': change.get('event_id'),
+                    'delay_hours': change.get('delay_hours')
+                })
+                
+                # Collect impact info
+                impact = await direct_tool_call(EventMonitor, 
+                                              action="analyze_impact",
+                                              event_id=change.get('event_id'))
+                if impact:
+                    for line in impact.split('\n'):
+                        if '*' in line:
+                            team = line.strip()[2:].split()[0]
+                            affected_teams.add(team)
+                            team_impacts[team] = impact
 
-        # Prepare notifications only if we have successful updates
-        if all_updates:
-            notifications = []
+        # Execute all calendar updates in one batch
+        if calendar_updates:
+            result = await direct_tool_call(CalendarTool, 
+                                          action="batch_edit",
+                                          edits=calendar_updates)
             
-            # Get contacts for each affected team
+            # Prepare all notifications at once
+            notifications = []
             for team in affected_teams:
                 contacts = await get_team_contacts(team)
                 if contacts:
                     for contact in contacts:
                         if contact.get('emails'):
-                            for email in contact['emails']:
-                                if email and email != 'N/A':
-                                    notification = {
-                                        'action': 'send',
-                                        'recipient': email,
-                                        'recipient_name': contact.get('name', 'Team Member'),
-                                        'subject': f'Important Schedule Update - {team}',
-                                        'body': await generate_personalized_email(
-                                            contact.get('name', 'Team Member'),
-                                            team,
-                                            'Team Member',
-                                            changes,
-                                            team_impacts.get(team, '')
-                                        )
-                                    }
-                                    notifications.append(notification)
+                            notifications.append({
+                                'recipient': contact['emails'][0],
+                                'recipient_name': contact.get('name', 'Team Member'),
+                                'subject': f'Important Schedule Update - {team}',
+                                'body': await generate_personalized_email(
+                                    contact.get('name', 'Team Member'),
+                                    team,
+                                    'Team Member',
+                                    changes,
+                                    team_impacts.get(team, '')
+                                )
+                            })
             
-            # Send notifications with retries
-            notifications_sent = 0
-            for notification in notifications:
-                max_retries = 3
-                for attempt in range(max_retries):
-                    try:
-                        result = await direct_tool_call(EmailingTool, **notification)
-                        if result:
-                            notifications_sent += 1
-                            break
-                    except Exception as e:
-                        if attempt < max_retries - 1:
-                            print(f"\nRetrying notification... ({attempt + 2}/{max_retries})")
-                            await asyncio.sleep(5)  # Short delay between retries
-                        else:
-                            print(f"\nFailed to send notification to {notification['recipient']}")
-            
-            return f"Successfully applied {len(all_updates)} schedule updates. Sent {notifications_sent} notifications."
+            # Send all notifications in one batch
+            if notifications:
+                result = await direct_tool_call(EmailingTool, 
+                                              action="batch_send",
+                                              notifications=notifications)
+                
+            return f"Successfully applied {len(calendar_updates)} updates and sent {len(notifications)} notifications."
         
         return "No updates were applied."
 
@@ -551,5 +531,4 @@ async def text_conversation_loop():
 
 if __name__ == "__main__":
     # Run the text-based conversation loop
-    asyncio.run(text_conversation_loop())
     asyncio.run(text_conversation_loop())
