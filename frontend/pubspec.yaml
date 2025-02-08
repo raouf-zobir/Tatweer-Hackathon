@@ -1,0 +1,30 @@
+name: supply_chain_monitor
+description: Real-time supply chain monitoring system
+
+environment:
+  sdk: ">=2.12.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Firebase
+  firebase_core: ^1.10.0
+  firebase_auth: ^3.3.0
+  cloud_firestore: ^3.1.0
+
+  # State Management
+  provider: ^6.0.0
+
+  # UI Components
+  flutter_charts: ^0.5.0
+  google_fonts: ^2.1.0
+
+  # API Integration
+  http: ^0.13.0
+  googleapis: ^7.0.0
+  googleapis_auth: ^1.1.0
+
+  # Utilities
+  intl: ^0.17.0
+  shared_preferences: ^2.0.8

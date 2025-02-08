@@ -25,6 +25,7 @@ class SideMenu extends StatelessWidget {
             page: DashboardPage.aiAssistant,
           ),
           _DrawerListTile(
+
             title: "Predict Risk",
             icon: Icons.assessment_outlined,
             page: DashboardPage.predict,
@@ -34,12 +35,9 @@ class SideMenu extends StatelessWidget {
             icon: Icons.shopping_bag_outlined,
             page: DashboardPage.products,
           ),
+
           _DrawerListTile(
-            title: "Inbox",
-            icon: Icons.inbox_outlined,
-            page: DashboardPage.inbox,
-          ),
-          _DrawerListTile(
+
             title: "Order Lists",
             icon: Icons.list_alt_outlined,
             page: DashboardPage.orderLists,

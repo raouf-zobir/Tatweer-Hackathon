@@ -22,6 +22,8 @@ class Agent:
         self.consecutive_failures = 0
         self.max_consecutive_failures = 3
         self.base_wait_time = 20
+        self.response_cache = {}
+        self.batch_operations = []
 
     def handle_rate_limit(self):
         """Handle rate limit with exponential backoff"""
@@ -87,6 +89,16 @@ class Agent:
         response_content = self.execute()
         return response_content
 
+    def batch_similar_operations(self, operations):
+        """Batch similar operations together to reduce API calls"""
+        batched = {}
+        for op in operations:
+            key = f"{op['tool']}_{op['action']}"
+            if key not in batched:
+                batched[key] = []
+            batched[key].append(op)
+        return batched
+
     def execute_tool(self, tool_call):
         function_name = tool_call.function.name
         func = next(
@@ -99,6 +111,29 @@ class Agent:
         try:
             print(Fore.GREEN + f"\nCalling Tool: {function_name}")
             print(Fore.GREEN + f"Arguments: {tool_call.function.arguments}\n")
+            cache_key = f"{function_name}_{tool_call.function.arguments}"
+            if cache_key in self.response_cache:
+                return self.response_cache[cache_key]
+
+            if self.batch_operations:
+                # Batch similar operations
+                batched = self.batch_similar_operations(self.batch_operations)
+                self.batch_operations = []
+                
+                results = []
+                for ops in batched.values():
+                    if len(ops) > 1:
+                        # Execute batch operation
+                        result = self.execute_batch(ops)
+                        results.extend(result)
+                    else:
+                        # Execute single operation
+                        result = self.execute_single(ops[0])
+                        results.append(result)
+                
+                return results
+
+            # Regular single operation execution
             func = func(**eval(tool_call.function.arguments))
             output = func.run()
 
@@ -114,11 +149,46 @@ class Agent:
             }
             self.messages.append(tool_message)
 
+            self.response_cache[cache_key] = output
             return output
         except Exception as e:
             error_msg = f"Error executing {function_name}: {str(e)}"
             print(Fore.RED + error_msg)
             return error_msg
+
+    async def execute_batch(self, operations):
+        """Execute multiple similar operations in a single call"""
+        if not operations:
+            return []
+            
+        tool_name = operations[0]['tool']
+        results = []
+        
+        try:
+            # Group operations by tool
+            if tool_name == 'CalendarTool':
+                # Batch calendar operations
+                edits = [{'event_id': op['event_id'], 'delay_hours': op['delay_hours']} 
+                        for op in operations]
+                result = await direct_tool_call(CalendarTool, 
+                                              action="batch_edit",
+                                              edits=edits)
+                results.append(result)
+            elif tool_name == 'EmailingTool':
+                # Batch email operations
+                notifications = [{'recipient': op['recipient'],
+                                'subject': op['subject'],
+                                'body': op['body']}
+                               for op in operations]
+                result = await direct_tool_call(EmailingTool,
+                                              action="batch_send",
+                                              notifications=notifications)
+                results.append(result)
+                
+        except Exception as e:
+            print(f"Error in batch execution: {e}")
+            
+        return results
 
     def get_openai_tools_schema(self):
         return [

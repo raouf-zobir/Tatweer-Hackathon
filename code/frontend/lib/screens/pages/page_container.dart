@@ -14,6 +14,9 @@ import '../../components/page_title.dart';
 import '../dashboard/components/products_page.dart';
 import '../dashboard/components/order_lists_page.dart';
 
+import 'ai_assistant_page.dart';
+
+
 class PageContainer extends StatelessWidget {
   final DashboardPage currentPage;
 
@@ -37,12 +40,8 @@ class PageContainer extends StatelessWidget {
         return PredictDemandPage();
       case DashboardPage.products:
         return ProductsPage();
-      case DashboardPage.inbox:
-        return ResponsivePage(
-          title: "Inbox",
-          subtitle: "Manage your messages and notifications",
-          icon: Icons.inbox,
-        );
+      case DashboardPage.aiAssistant:
+        return AIAssistantPage();
       case DashboardPage.orderLists:
         return OrderListsPage();
       case DashboardPage.productStock:

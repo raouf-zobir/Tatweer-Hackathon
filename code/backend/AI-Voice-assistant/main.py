@@ -26,17 +26,70 @@ tools_list = [
 
 agent = Agent("Assistant Agent", model, tools_list, system_prompt=assistant_prompt)
 
-async def handle_command(agent, command):
-    """Handle natural language input from user"""
+class ResponseAccumulator:
+    def __init__(self):
+        self.response = ""
+    
+    def add(self, text):
+        if text:
+            self.response += f"{text}\n"
+    
+    def get_response(self):
+        return self.response.strip()
+    
+    def clear(self):
+        self.response = ""
+
+async def handle_command(agent, command, conversation_context="", conversation_manager=None):
+    """Handle natural language input from user with conversation context"""
     max_retries = 3
     retry_delay = 20
     
+    # Check if it's an email command
+    if any(keyword in command.lower() for keyword in ["send email", "write email", "email to"]):
+        try:
+            # Extract recipient from command
+            recipient = extract_recipient_from_command(command)
+            if not recipient:
+                return "Could you please specify who you want to send the email to?"
+
+            # Fetch contact details
+            contact_tool = FetchContactTool(contact_name=recipient)
+            contact_result = contact_tool.run()
+            
+            if not contact_result:
+                return f"I couldn't find contact details for {recipient}. Please check the name and try again."
+
+            # Parse contact data
+            contact_data = json.loads(contact_result)
+            if isinstance(contact_data, dict) and "error" in contact_data:
+                return f"Error fetching contact: {contact_data['error']}"
+            
+            # Create email content
+            email_tool = EmailingTool()
+            email_content = await agent.invoke(f"Generate email content for: {command}")
+            
+            # Send email
+            result = email_tool.run({
+                "to": contact_data["email"],
+                "subject": f"RE: {command.split('about ')[-1] if 'about ' in command else 'New Message'}",
+                "content": email_content
+            })
+            
+            return f"Email sent successfully to {recipient} ({contact_data['email']})"
+            
+        except Exception as e:
+            print(f"Error handling email command: {e}")
+            return f"I encountered an error while trying to send the email: {str(e)}"
+
+    # Handle other commands as before
     for attempt in range(max_retries):
         try:
-            # Enhance command with context for better understanding
             enhanced_command = (
+                f"Previous conversation:\n{conversation_context}\n\n"
+                f"Current context: {conversation_manager.context if conversation_manager else {}}\n\n"
                 f"User input: '{command}'\n"
-                f"Based on this input, understand the user's intent and:\n"
+                f"Based on this input and previous context, understand the user's intent and:\n"
                 f"1. Determine if this requires any operational actions\n"
                 f"2. If yes, execute appropriate tools and provide results\n"
                 f"3. If no, provide a natural conversational response\n"
@@ -60,6 +113,20 @@ async def handle_command(agent, command):
                 time.sleep(retry_delay)
             else:
                 return "I encountered an error. Could you try expressing that differently?"
+
+def extract_recipient_from_command(command):
+    """Extract recipient name from email command"""
+    command = command.lower()
+    keywords = ["send email to", "write email to", "email to"]
+    
+    for keyword in keywords:
+        if keyword in command:
+            parts = command.split(keyword)
+            if len(parts) > 1:
+                recipient = parts[1].split()[0].strip()
+                return recipient.title()
+    
+    return None
 
 async def direct_tool_call(tool_class, **kwargs):
     """Call tools directly without going through the LLM"""
@@ -149,49 +216,31 @@ async def generate_comprehensive_summary(calendar_status, issues, proposed_chang
 
     return summary
 
-async def handle_change_confirmation(agent, changes, issues):
-    """Handle change proposals with natural conversation"""
+async def handle_change_confirmation(agent, changes, issues, conversation_manager=None):
+    """Handle change proposals with conversation context"""
     try:
         # Get current calendar status
         calendar_status = await direct_tool_call(CalendarTool, action="view")
         
         # Generate comprehensive summary
         summary = await generate_comprehensive_summary(calendar_status, issues, changes)
-        print(summary)
         
-        print("\nPlease let me know what you think about these changes.")
+        if conversation_manager:
+            conversation_manager.update_context('pending_changes', changes)
+            conversation_manager.update_context('current_issues', issues)
         
-        while True:
-            user_input = input("\nYou: ").strip()
-            
-            # Let the agent interpret the response naturally
-            response = await handle_command(agent, 
-                f"Regarding the proposed changes, the user said: '{user_input}'\n"
-                f"Current changes: {changes}\n"
-                f"Based on this, determine if the user:\n"
-                f"1. Wants to proceed with changes\n"
-                f"2. Wants to cancel changes\n"
-                f"3. Needs modifications\n"
-                f"4. Needs more explanation\n"
-                f"5. Has other concerns\n"
-                f"Then take appropriate action."
-            )
-            
-            # Let the agent's response guide the next steps
-            if "PROCEED" in response:
-                return await apply_approved_changes(changes, summary)
-            elif "EXPLAIN" in response:
-                print(f"\n{response.split('EXPLAIN: ')[1]}")
-                print("\nWould you like to proceed with the changes now?")
-            elif "MODIFY" in response:
-                return await handle_modification_request(agent, user_input, changes, issues)
-            elif "CANCEL" in response:
-                return "Changes cancelled. Let me know if you'd like to explore other options."
-            else:
-                print(f"\n{response}")
+        return {
+            "type": "change_proposal",
+            "message": summary,
+            "changes": changes,
+            "issues": issues
+        }
 
     except Exception as e:
-        return f"Error during confirmation: {str(e)}"
+        return {
+            "type": "error",
+            "message": f"Error during confirmation: {str(e)}"
+        }
 
 async def get_team_contacts(team_name):
     """Fetch contacts for a specific team"""
@@ -368,176 +417,114 @@ async def edit_email_content(email_data):
         print("\nEmail updated. Review the changes?")
 
 async def apply_approved_changes(changes, summary):
-    """Apply approved changes with comprehensive updates"""
     try:
-        print("\nApplying changes...")
-        
-        all_updates = []
+        # Deduplicate and batch calendar updates
+        calendar_updates = {}  
         affected_teams = set()
-        
-        # Collect affected teams and their impacts
         team_impacts = {}
+        
         for change in changes:
-            if change.get('event_id'):
-                impact = await direct_tool_call(EventMonitor, 
-                                              action="analyze_impact",
-                                              event_id=change['event_id'])
-                if impact:
-                    for line in impact.split('\n'):
-                        if '*' in line:
-                            team = line.strip()[2:].split()[0]
-                            affected_teams.add(team)
-                            team_impacts[team] = impact
-        
-        # Process calendar updates
-        for change in changes:
-            result = await direct_tool_call(CalendarTool, **change)
-            if result:
-                all_updates.append(result)
-        
-        # Prepare and confirm notifications
-        print("\nPreparing notifications for affected teams...")
-        notifications = []
-        
-        for team in affected_teams:
-            contacts = await get_team_contacts(team)
-            if contacts:
-                for contact in contacts:
-                    if 'emails' in contact and contact['emails']:
-                        for email in contact['emails']:
-                            if email and email != 'N/A':
-                                # Generate personalized content
-                                email_content = await generate_personalized_email(
-                                    contact.get('name', 'Team Member'),
-                                    team,
-                                    "Team Member",  # You could add role detection here
-                                    changes,
-                                    team_impacts.get(team, "")
-                                )
-                                
-                                notifications.append({
-                                    'recipient_name': contact.get('name', 'Team Member'),
-                                    'recipient': email,
-                                    'team': team,
-                                    'content': email_content
-                                })
-        
-        # Show preview and confirm
-        if notifications:
-            editing = True
-            while editing:
-                print("\nEmail Preview (first notification):")
-                print("-" * 50)
-                print(notifications[0]['content'])
-                print("-" * 50)
+            if change.get('action') == 'edit':
+                event_id = change.get('event_id')
+                if event_id not in calendar_updates:
+                    calendar_updates[event_id] = {
+                        'event_id': event_id,
+                        'delay_hours': change.get('delay_hours')
+                    }
                 
-                print("\nWould you like to:")
-                print("1. Edit the email")
-                print("2. Send as is")
-                print("3. Cancel sending")
-                
-                choice = input("\nYour choice (1-3): ").strip()
-                
-                if choice == '1':
-                    edited_notification = await edit_email_content(notifications[0])
-                    if edited_notification:
-                        # Apply the edited template to all notifications
-                        template = edited_notification['content']
-                        for notif in notifications:
-                            notif['content'] = template.replace(
-                                notifications[0]['recipient_name'], notif['recipient_name']
-                            ).replace(
-                                notifications[0]['team'], notif['team']
-                            )
-                        continue
-                    else:
-                        return "Notification sending cancelled. Calendar updates still applied."
-                elif choice == '2':
-                    editing = False
-                elif choice == '3':
-                    return "Notification sending cancelled. Calendar updates still applied."
+                if event_id not in team_impacts:
+                    impact = await direct_tool_call(EventMonitor, 
+                                                  action="analyze_impact",
+                                                  event_id=event_id)
+                    if impact:
+                        for line in impact.split('\n'):
+                            if '*' in line:
+                                team = line.strip()[2:].split()[0]
+                                affected_teams.add(team)
+                                team_impacts[team] = impact
+
+        # Execute all calendar updates in one batch
+        if calendar_updates:
+            result = await direct_tool_call(CalendarTool, 
+                                          action="batch_edit",
+                                          edits=list(calendar_updates.values()))
             
-            # Send confirmed notifications
-            notifications_sent = 0
-            for notif in notifications:
-                notification = {
-                    'action': 'send',
-                    'recipient_name': notif['recipient_name'],
-                    'recipient': notif['recipient'],
-                    'subject': f'Important Schedule Update - {notif["team"]}',
-                    'body': notif['content']
-                }
-                await direct_tool_call(EmailingTool, **notification)
-                notifications_sent += 1
-            
-            return f"Successfully applied {len(all_updates)} schedule updates. Sent {notifications_sent} personalized notifications."
-        
-        return f"Successfully applied {len(all_updates)} schedule updates. No notifications needed."
-        
+            return {
+                "type": "changes_applied",
+                "message": f"Successfully applied {len(calendar_updates)} updates.",
+                "details": result
+            }
+
     except Exception as e:
-        return f"Error applying changes: {str(e)}"
+        return {
+            "type": "error",
+            "message": f"Error applying changes: {str(e)}"
+        }
 
 async def handle_modification_request(agent, user_input, changes, issues):
     """Handle requests to modify the proposed changes"""
     try:
-        response = await agent.invoke(
-            f"User wants to modify changes: '{user_input}'. Current changes: {changes}. "
-            "Analyze request and suggest modifications."
-        )
-        print(f"\nAssistant: {response}")
-        
-        # Get new proposal based on user's request
-        return await handle_change_confirmation(agent, changes, issues)
+        # Parse modification intent
+        if "early" in user_input.lower() or "advance" in user_input.lower():
+            # Make delay hours negative for advancement
+            hours = int(''.join(filter(str.isdigit, user_input))) * -1
+            
+            # Modify all changes at once
+            modified_changes = [{
+                'action': 'edit',
+                'event_id': change['event_id'],
+                'delay_hours': hours
+            } for change in changes if change.get('action') == 'edit']
+            
+            # Apply changes in a single batch
+            return await handle_change_confirmation(agent, modified_changes, issues)
+            
+        # Handle other modification types
+        # ...existing code...
         
     except Exception as e:
         return f"Error handling modification: {str(e)}"
 
 async def startup_sequence(agent):
     """Initial startup sequence to check for problems and show solutions"""
-    print("\nAssistant: Initializing system and checking for operational issues...")
+    response_accumulator = ResponseAccumulator()
+    response_accumulator.add("Initializing system and checking for operational issues...")
     
     try:
-        # Check calendar directly - no initialization
-        print("\nChecking calendar...")
+        response_accumulator.add("\nChecking calendar...")
         calendar_status = await direct_tool_call(CalendarTool, action="view")
-        print("\nCurrent Schedule:")
-        print(calendar_status)
+        response_accumulator.add("\nCurrent Schedule:")
+        response_accumulator.add(calendar_status)
 
-        # Check for issues directly
-        print("\nChecking for operational issues...")
+        response_accumulator.add("\nChecking for operational issues...")
         issues = await direct_tool_call(EventMonitor, action="check_all")
         
         if issues and len(issues) > 0:
             all_changes = []
-            print("\nFound operational issues:")
+            response_accumulator.add("\nFound operational issues:")
             
             for issue in issues:
-                print(f"\n- {issue['type'].title()} issue: {issue['details']}")
+                response_accumulator.add(f"\n- {issue['type'].title()} issue: {issue['details']}")
                 
-                # Get impact analysis
                 impact = await direct_tool_call(EventMonitor, 
                                               action="analyze_impact",
                                               event_id=issue['id'])
-                print(impact)
+                response_accumulator.add(impact)
                 
-                # Get solutions
                 solutions = await direct_tool_call(EventMonitor,
                                                  action="propose_solution",
                                                  event_id=issue['id'])
                 
                 if isinstance(solutions, dict) and 'proposed_actions' in solutions:
                     changes = []
-                    print("\nProposed actions:")
+                    response_accumulator.add("\nProposed actions:")
                     for action in solutions['proposed_actions']:
-                        print(f"  - {action}")
-                        # Convert action to calendar change
+                        response_accumulator.add(f"  - {action}")
                         if "Reschedule" in action:
-                            event_id = issue['id']
-                            delay_hours = 3  # From the action
                             changes.append({
                                 'action': 'edit',
-                                'event_id': event_id,
-                                'delay_hours': delay_hours
+                                'event_id': issue['id'],
+                                'delay_hours': 3
                             })
                     all_changes.extend(changes)
                 
@@ -545,35 +532,16 @@ async def startup_sequence(agent):
             
             if all_changes:
                 result = await handle_change_confirmation(agent, all_changes, issues)
-                print(f"\n{result}")
+                response_accumulator.add(f"\n{result}")
         else:
-            print("\nNo operational issues detected.")
+            response_accumulator.add("\nNo operational issues detected.")
 
     except Exception as e:
-        print(Fore.RED + f"\nError during startup: {str(e)}")
-        print("Continuing with basic operation mode...")
+        response_accumulator.add(f"\nError during startup: {str(e)}")
+        response_accumulator.add("Continuing with basic operation mode...")
     
-    print("\nAssistant: I'm ready to help you manage operations. What would you like to do?")
-
-async def text_conversation_loop():
-    print("\nAssistant: Hello! I'm your operations assistant. Type 'quit' to exit.")
-    
-    # Run the startup sequence
-    await startup_sequence(agent)
-    
-    while True:
-        user_input = input("\nYou: ").strip()
-        
-        if user_input.lower() == 'quit':
-            print("Assistant: Goodbye!")
-            break
-            
-        if user_input:
-            response = await handle_command(agent, user_input)
-            print(f"\nAssistant: {response}")
-    # Run the text-based conversation loop
+    response_accumulator.add("\nI'm ready to help you manage operations. What would you like to do?")
+    return response_accumulator.get_response()
 
 if __name__ == "__main__":
-    # Run the text-based conversation loop
-    asyncio.run(text_conversation_loop())
-    asyncio.run(text_conversation_loop())
+    print("This module should be imported by server.py")
