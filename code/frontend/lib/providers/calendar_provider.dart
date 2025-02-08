@@ -17,41 +17,32 @@ class CalendarProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadEvents(DateTime month) async {
+  Future<void> loadEvents(DateTime date) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      print('Loading events for month: ${month.month}/${month.year}');
-      final monthPath = CalendarEvent.getMonthPath(month);
-      print('Month path: $monthPath');
-
       final snapshot = await _firestore
           .collection('calendar')
-          .doc(monthPath)
-          .collection('events')
-          .orderBy('timestamp', descending: true)
+          .doc('events')
+          .collection(date.year.toString())
+          .doc(date.month.toString())
+          .collection('days')
           .get();
 
-      print('Found ${snapshot.docs.length} events');
-
       _eventsByDate.clear();
-      
+
       for (var doc in snapshot.docs) {
         final event = CalendarEvent.fromFirestore(doc);
-        final dateKey = DateTime(
-          event.date.year,
-          event.date.month,
-          event.date.day,
-        );
-
+        final dateKey = DateTime(event.date.year, event.date.month, event.date.day);
+        
         if (!_eventsByDate.containsKey(dateKey)) {
           _eventsByDate[dateKey] = [];
         }
         _eventsByDate[dateKey]!.add(event);
       }
 
-      print('Events loaded successfully');
+      print('Loaded ${snapshot.docs.length} events');
     } catch (e) {
       print('Error loading events: $e');
       throw e;
@@ -63,53 +54,18 @@ class CalendarProvider extends ChangeNotifier {
 
   Future<void> addEvent(CalendarEvent event) async {
     try {
-      print('Adding event to Firebase: ${event.title}');
-      final monthPath = CalendarEvent.getMonthPath(event.date);
-      print('Month path: $monthPath');
-
-      // Create the month document if it doesn't exist
-      await _firestore.collection('calendar').doc(monthPath).set({
-        'month': monthPath,
-        'created_at': FieldValue.serverTimestamp(),
-      });
-
-      // Add the event to the events subcollection
+      // Simplified path structure
       final docRef = await _firestore
           .collection('calendar')
-          .doc(monthPath)
-          .collection('events')
+          .doc('events')
+          .collection(event.date.year.toString())
+          .doc(event.date.month.toString())
+          .collection('days')
           .add(event.toMap());
 
-      print('Event added with ID: ${docRef.id}');
-
-      // Add to local state
-      final dateKey = DateTime(
-        event.date.year,
-        event.date.month,
-        event.date.day,
-      );
-
-      if (!_eventsByDate.containsKey(dateKey)) {
-        _eventsByDate[dateKey] = [];
-      }
-
-      _eventsByDate[dateKey]!.add(
-        CalendarEvent(
-          id: docRef.id,
-          title: event.title,
-          description: event.description,
-          date: event.date,
-          startTime: event.startTime,
-          endTime: event.endTime,
-          type: event.type,
-          status: event.status,
-          color: event.color,
-          createdBy: event.createdBy,
-        ),
-      );
-
-      notifyListeners();
-      print('Event added successfully');
+      print('Added event with ID: ${docRef.id}');
+      
+      await loadEvents(event.date);
     } catch (e) {
       print('Error adding event: $e');
       throw e;

@@ -6,8 +6,6 @@ class CalendarEvent {
   final String title;
   final String description;
   final DateTime date;
-  final TimeOfDay startTime;
-  final TimeOfDay endTime;
   final String type;
   final String status;
   final Color color;
@@ -18,8 +16,6 @@ class CalendarEvent {
     required this.title,
     required this.description,
     required this.date,
-    required this.startTime,
-    required this.endTime,
     required this.type,
     this.status = 'pending',
     this.color = Colors.blue,
@@ -33,8 +29,6 @@ class CalendarEvent {
       title: data['title'] ?? '',
       description: data['description'] ?? '',
       date: (data['date'] as Timestamp).toDate(),
-      startTime: _timeFromString(data['startTime'] ?? '09:00'),
-      endTime: _timeFromString(data['endTime'] ?? '10:00'),
       type: data['type'] ?? '',
       status: data['status'] ?? 'pending',
       color: Color(data['color'] ?? Colors.blue.value),
@@ -47,22 +41,12 @@ class CalendarEvent {
       'title': title,
       'description': description,
       'date': Timestamp.fromDate(date),
-      'startTime': '${startTime.hour}:${startTime.minute}',
-      'endTime': '${endTime.hour}:${endTime.minute}',
       'type': type,
       'status': status,
       'color': color.value,
       'createdBy': createdBy,
       'timestamp': FieldValue.serverTimestamp(),
     };
-  }
-
-  static TimeOfDay _timeFromString(String time) {
-    final parts = time.split(':');
-    return TimeOfDay(
-      hour: int.parse(parts[0]),
-      minute: int.parse(parts[1]),
-    );
   }
 
   static String getMonthPath(DateTime date) {

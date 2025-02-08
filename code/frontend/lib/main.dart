@@ -13,6 +13,7 @@ import 'providers/product_provider.dart';
 import 'providers/order_provider.dart';
 import 'providers/contact_provider.dart';
 import 'providers/calendar_provider.dart';
+import 'services/firebase_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +34,9 @@ Future<void> main() async {
       appId: firebaseConfig['appId'],
     ),
   );
+
+  // Initialize calendar collection
+  await FirebaseService.initializeCalendar();
 
   runApp(
     MultiProvider(
