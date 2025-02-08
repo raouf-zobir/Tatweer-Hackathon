@@ -35,8 +35,8 @@ Future<void> main() async {
     ),
   );
 
-  // Initialize calendar collection
-  await FirebaseService.initializeCalendar();
+  // Initialize weekly schedule instead of calendar
+  await FirebaseService.initializeWeeklySchedule();
 
   runApp(
     MultiProvider(

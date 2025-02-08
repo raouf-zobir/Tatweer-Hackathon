@@ -35,9 +35,8 @@ class _CalendarPageState extends State<CalendarPage> {
 
   Future<void> _saveEventToFirebase(ScheduleEvent event) async {
     try {
-      print('Attempting to save event to Firebase...');
+      print('Saving event to weekly schedule...');
       
-      // Create a document in the events collection for the specific day
       final docRef = await _firestore
           .collection('weekly_schedule')
           .doc(_selectedDay.toString())
@@ -82,7 +81,7 @@ class _CalendarPageState extends State<CalendarPage> {
 
   Future<void> _loadEventsFromFirebase() async {
     try {
-      print('Loading events from Firebase...');
+      print('Loading weekly schedule...');
       _scheduleData.clear();
 
       // Load events for all days
@@ -120,7 +119,7 @@ class _CalendarPageState extends State<CalendarPage> {
       print('Events loaded successfully');
       setState(() {});
     } catch (e) {
-      print('Error loading events: $e');
+      print('Error loading weekly schedule: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error loading events: $e'),

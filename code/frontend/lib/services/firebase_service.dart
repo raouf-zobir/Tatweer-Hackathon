@@ -3,20 +3,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class FirebaseService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  static Future<void> initializeCalendar() async {
+  static Future<void> initializeWeeklySchedule() async {
     try {
-      // Create calendar collection if it doesn't exist
-      final calendarRef = _firestore.collection('calendar');
-      final doc = await calendarRef.doc('info').get();
+      // Create weekly_schedule collection if it doesn't exist
+      final weeklyRef = _firestore.collection('weekly_schedule');
+      final doc = await weeklyRef.doc('info').get();
       
       if (!doc.exists) {
-        await calendarRef.doc('info').set({
+        await weeklyRef.doc('info').set({
           'created_at': FieldValue.serverTimestamp(),
           'last_updated': FieldValue.serverTimestamp(),
         });
       }
     } catch (e) {
-      print('Error initializing calendar: $e');
+      print('Error initializing weekly schedule: $e');
       throw e;
     }
   }
