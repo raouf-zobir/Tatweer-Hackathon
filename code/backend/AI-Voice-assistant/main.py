@@ -45,9 +45,46 @@ async def handle_command(agent, command, conversation_context="", conversation_m
     max_retries = 3
     retry_delay = 20
     
+    # Check if it's an email command
+    if any(keyword in command.lower() for keyword in ["send email", "write email", "email to"]):
+        try:
+            # Extract recipient from command
+            recipient = extract_recipient_from_command(command)
+            if not recipient:
+                return "Could you please specify who you want to send the email to?"
+
+            # Fetch contact details
+            contact_tool = FetchContactTool(contact_name=recipient)
+            contact_result = contact_tool.run()
+            
+            if not contact_result:
+                return f"I couldn't find contact details for {recipient}. Please check the name and try again."
+
+            # Parse contact data
+            contact_data = json.loads(contact_result)
+            if isinstance(contact_data, dict) and "error" in contact_data:
+                return f"Error fetching contact: {contact_data['error']}"
+            
+            # Create email content
+            email_tool = EmailingTool()
+            email_content = await agent.invoke(f"Generate email content for: {command}")
+            
+            # Send email
+            result = email_tool.run({
+                "to": contact_data["email"],
+                "subject": f"RE: {command.split('about ')[-1] if 'about ' in command else 'New Message'}",
+                "content": email_content
+            })
+            
+            return f"Email sent successfully to {recipient} ({contact_data['email']})"
+            
+        except Exception as e:
+            print(f"Error handling email command: {e}")
+            return f"I encountered an error while trying to send the email: {str(e)}"
+
+    # Handle other commands as before
     for attempt in range(max_retries):
         try:
-            # Enhance command with context for better understanding
             enhanced_command = (
                 f"Previous conversation:\n{conversation_context}\n\n"
                 f"Current context: {conversation_manager.context if conversation_manager else {}}\n\n"
@@ -76,6 +113,20 @@ async def handle_command(agent, command, conversation_context="", conversation_m
                 time.sleep(retry_delay)
             else:
                 return "I encountered an error. Could you try expressing that differently?"
+
+def extract_recipient_from_command(command):
+    """Extract recipient name from email command"""
+    command = command.lower()
+    keywords = ["send email to", "write email to", "email to"]
+    
+    for keyword in keywords:
+        if keyword in command:
+            parts = command.split(keyword)
+            if len(parts) > 1:
+                recipient = parts[1].split()[0].strip()
+                return recipient.title()
+    
+    return None
 
 async def direct_tool_call(tool_class, **kwargs):
     """Call tools directly without going through the LLM"""
