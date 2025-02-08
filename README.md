@@ -89,6 +89,8 @@ Operational Update and Issue Management Example:
 
 ## System Components
 
+![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/image.png)
+
 ### Delay Detector
 The system uses OpenRouteService API to:
 - Calculate real-time ETAs based on current vehicle positions
@@ -99,8 +101,9 @@ The system uses OpenRouteService API to:
 - Automatically trigger AI agent responses when delays are detected
 ## System Explanation: How It Works  
 Below is a brief explanation of how our system functions
+![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/image2.png)
 
-![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/image.png)
+
 ## How to Run
 
 ### Prerequisites
