@@ -56,7 +56,7 @@ async def predict(data: InputData):
 
         # Encode categorical data and scale numerical data
         X_categorical = encoder.transform(input_data[["Weather Condition", "Traffic Level", "Vehicle Type", "Goods Type"]])
-        X_numerical = scaler.transinform(input_data[["Distance (km)", "Driver Experience (years)", "Loading Weight (kg)", "Year of Vehicle"]])
+        X_numerical = scaler.transform(input_data[["Distance (km)", "Driver Experience (years)", "Loading Weight (kg)", "Year of Vehicle"]])
         X = np.hstack((X_categorical, X_numerical))
 
         # Make predictions
@@ -72,4 +72,4 @@ async def predict(data: InputData):
 # Run the FastAPI app
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
