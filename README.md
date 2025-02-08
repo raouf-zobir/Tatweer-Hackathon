@@ -1,76 +1,112 @@
-# Real-Time Supply Chain Monitoring and Adaptation System
+# AI Voice Assistant: Your Intelligent Conversational Companion
 
-## Overview
-An intelligent supply chain management solution that provides real-time monitoring and adaptive response to logistics challenges. The system uses AI agents to detect, analyze, and respond to supply chain disruptions while continuously learning from historical data.
+**Transform your digital interactions with your own AI Voice Assistant🎙️🤖**
 
-## Key Features
-- Real-time monitoring and problem detection
-- AI-powered adaptive response system
-- Voice Interaction Capabilities:
-  - Speech-to-text for voice commands
-  - Text-to-speech for agent responses
-  - Natural voice conversations with AI agent
-- Predictive analytics for future disruptions
-- Sales prediction capabilities
-- Human-in-the-loop confirmation system
-- Automated calendar management and stakeholder notification
+This project is an advanced AI Voice Assistant that integrates Text-to-Speech (TTS) and Speech-to-Text (STT) capabilities, allowing users to communicate directly with the agent and receive vocal responses. The assistant can utilize various tools to fulfill user requests, including managing calendars, contacts, emails, and performing web searches.
 
-## Technology Stack
-- **Frontend**: Flutter/Dart (Web Application)
-- **Backend**: 
-  - Python (AI Agents)
-  - FastAPI & Flask (API Services)
-  - Dart
-- **Database**: Firebase
-- **Authentication**: Firebase Auth
-- **Calendar Integration**: Google Calendar API
-- **AI & Voice**: 
-  - Deepgram (Speech-to-Text)
-  - Google Text-to-Speech
-  - Gemini & Groq AI
-  - Tavily Search API
-- **Other Tools**: 
-  - Colorama (Agent Console Interface)
-  - IoT Integration (Simulated)
+## Features
 
-## System Components
-1. **Main AI Agent**: Real-time monitoring and response system
-2. **Predictive AI**: Historical analysis and future disruption prediction
-3. **Sales Prediction AI**: Product sales forecasting
-4. **Web Interface**: Flutter-based dashboard and control panel
+- **Speech-to-Text (STT)**: Convert spoken language into written text.
 
-## Important Notes
-⚠️ **Rate Limit Warning**: The AI agent system may have computational limitations and API rate limits. While it works well for common tasks (calendar management, email notifications, etc.), complex real-time processing might be throttled based on computational resources.
+- **Text-to-Speech (TTS)**: Generate vocal responses from text input.
 
-## Project Structure
-```
-├── frontend/                 # Flutter web application
-│   ├── lib/                 
-│   │   ├── screens/         # UI screens
-│   │   ├── widgets/         # Reusable components
-│   │   ├── services/        # API services
-│   │   └── models/          # Data models
-├── backend/
-│   ├── ai_agents/          # AI agent implementations
-│   │   ├── main_agent/     # Real-time monitoring agent
-│   │   ├── predictive/     # Predictive analysis agent
-│   │   └── sales/          # Sales prediction agent
-│   ├── api/                # FastAPI and Flask services
-│   └── utils/              # Utility functions
-└── docs/                   # Documentation
-```
+- **Vocal Interaction**: Engage in natural conversations with the AI assistant.
 
-## Getting Started
+- **Tool Integration**: Utilize built-in tools for calendar management, contact handling, email composition, web searching, and personal knowledge base access.
+
+### Available Tools
+
+- **CalendarTool**: Book events on Google Calendar with event name, date/time, and optional description.
+
+- **AddContactTool**: Add new contacts to Google Contacts with name, phone number, and optional email address.
+
+- **FetchContactTool**: Retrieve contact information from Google Contacts by searching with the contact's name.
+
+- **EmailingTool**: Send emails via Gmail by providing recipient name, subject, and body content.
+
+- **SearchWebTool**: Perform web searches to gather up-to-date information.
+
+- **KnowledgeBaseTool**: Access the user's personal notes and saved information from your custom knowledge base (all the documents included in the `/files` folder)
+
+## How to Run
+
 ### Prerequisites
-1. Firebase account and configuration
-2. Google Calendar API access
-3. Python 3.8+
-4. Flutter SDK
 
-### Google Calendar Integration
-The system uses a dedicated Google Calendar account for managing logistics schedules. Contact the system administrator for access credentials. **Never share these credentials publicly.**
+- Python 3.9+
 
-> ⚠️ **Security Note**: Calendar credentials should be stored in environment variables or secure configuration files, not in the code.
+- Google API credentials (for Calendar, Contacts, and Gmail access)
 
-## Architecture
-For detailed technical architecture, please see [ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+- Tavily API key (for web search)
+
+- Groq API key (for Llama3)
+
+- Google Gemini API key (for using the Gemini model)
+
+- Deepgram API key (for voice processing)
+
+- Necessary Python libraries (listed in `requirements.txt`)
+
+### Setup
+
+1. **Clone the repository:**
+
+```sh
+git clone https://github.com/yourusername/AI-Voice-assistant.git
+cd AI-Voice-assistant
+```
+
+2. **Create and activate a virtual environment:**
+
+```sh
+python -m venv venv
+source venv/bin/activate # On Windows use `venv\Scripts\activate`
+```
+
+3. **Install the required packages:**
+
+```sh
+pip install -r requirements.txt
+```
+
+4. **Set up environment variables:**
+
+Create a `.env` file in the root directory of the project and add your API keys:
+
+```env
+GOOGLE_API_KEY=your_google_api_key
+DEEPGRAM_API_KEY=your_deepgram_api_key
+TAVILY_API_KEY=your_tavily_api_key
+GEMINI_API_KEY=your_gemini_api_key
+GROQ_API_KEY=your_groq_api_key
+```
+
+5. **Configure Google API credentials:**
+
+Follow Google's documentation to set up credentials for Calendar, Contacts, and Gmail APIs. Save the credentials file in a secure location and update the path in the configuration file.
+
+### Running the Application
+
+1. **Start a conversation with the assistant:**
+
+```sh
+python main.py
+```
+
+The assistant is programmed to stop the conversation when the user says "goodbye".
+
+## Usage Examples
+
+- "Schedule a meeting with John for tomorrow at 2 PM."
+- "Add a new contact: Jane Doe, phone number 555-1234."
+- "What's Mary's email address?"
+- "Send an email to Bob with the subject 'Project Update'."
+- "Search the web for recent news about artificial intelligence."
+- "What was the recipe I saved last week for chocolate chip cookies?"
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request for any changes.
+
+## Contact
+
+If you have any questions or suggestions, feel free to contact me at `aymenMir1001@gmail.com`.
