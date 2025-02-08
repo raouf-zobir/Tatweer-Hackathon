@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # Import CORS
 import pandas as pd
 import numpy as np
 import pickle
@@ -7,7 +8,7 @@ import os
 # -------------------------------
 # Load the pre-trained Prophet model
 # -------------------------------
-MODEL_FILENAME = 'C:\\Users\\Raouf\\Documents\GitHub\\Tatweer_Hackathon\\code\\backend\\Ai-Demand-prediction\\prophet_model_log.pkl'
+MODEL_FILENAME = 'C:\\Users\\Raouf\\Documents\\GitHub\\Tatweer_Hackathon\\code\\backend\\Ai-Demand-prediction\\prophet_model_log.pkl'
 
 # Check if the model file exists
 if not os.path.exists(MODEL_FILENAME):
@@ -24,6 +25,7 @@ except Exception as e:
 # Create the Flask app
 # -------------------------------
 app = Flask(__name__)
+CORS(app)  # Enable CORS for the app
 
 @app.route('/', methods=['GET'])
 def home():
@@ -86,9 +88,51 @@ def forecast():
 
     return jsonify(results)
 
+@app.route('/predict_demand', methods=['POST'])
+def predict_demand():
+    """
+    Predict demand endpoint. Expects a JSON payload with:
+    {
+        "date": "01.01.2024",
+        "temperature": 10
+    }
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No input data provided. Please provide 'date' and 'temperature' in JSON format."}), 400
+
+    date = data.get("date")
+    temperature = data.get("temperature")
+    if not date or temperature is None:
+        return jsonify({"error": "Both 'date' and 'temperature' must be provided."}), 400
+
+    # Validate and prepare input data
+    try:
+        df_input = pd.DataFrame({
+            "ds": [pd.to_datetime(date, format='%d.%m.%Y')],
+            "temperature": [temperature]
+        })
+    except Exception as e:
+        return jsonify({"error": f"Date conversion error: {str(e)}"}), 400
+
+    # Make predictions using the model
+    try:
+        forecast_df = model.predict(df_input)
+        # Inverse the log1p transformation using np.expm1 to get back to the original scale
+        forecast_df['yhat_original'] = np.expm1(forecast_df['yhat'])
+    except Exception as e:
+        return jsonify({"error": f"Forecast error: {str(e)}"}), 500
+
+    result = {
+        "date": forecast_df['ds'].iloc[0].strftime('%d.%m.%Y'),
+        "forecast": forecast_df['yhat_original'].iloc[0]
+    }
+
+    return jsonify(result)
+
 # -------------------------------
 # Run the Flask app
 # -------------------------------
 if __name__ == '__main__':
     # Disable the reloader if you're running in an interactive environment.
-    app.run(host='127.0.0.1', port=5000, debug=True, use_reloader=False)
+    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)  # Updated IP address
