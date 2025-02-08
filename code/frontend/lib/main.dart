@@ -36,24 +36,26 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => MenuAppController()),
-        ChangeNotifierProvider(create: (_) => DashboardProvider()),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-      ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) {
-          return MaterialApp(
-            debugShowCheckedModeBanner: false,
-            title: 'Admin Dashboard',
-            themeMode: themeProvider.themeMode,
-            theme: themeProvider.getLightTheme(context),
-            darkTheme: themeProvider.getDarkTheme(context),
-            home: const LoginPage(),
-          );
-        },
+    return ChangeNotifierProvider(
+      create: (context) => MenuAppController(),
+      child: MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
+          ChangeNotifierProvider(create: (_) => DashboardProvider()),
+          ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ],
+        child: Consumer<ThemeProvider>(
+          builder: (context, themeProvider, child) {
+            return MaterialApp(
+              debugShowCheckedModeBanner: false,
+              title: 'Admin Dashboard',
+              themeMode: themeProvider.themeMode,
+              theme: themeProvider.getLightTheme(context),
+              darkTheme: themeProvider.getDarkTheme(context),
+              home: const LoginPage(),
+            );
+          },
+        ),
       ),
     );
   }

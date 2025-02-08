@@ -8,14 +8,14 @@ class MenuAppController extends ChangeNotifier {
   GlobalKey<ScaffoldState> get scaffoldKey => _scaffoldKey;
   DashboardPage get currentPage => _currentPage;
 
+  void changePage(DashboardPage page) {
+    _currentPage = page;
+    notifyListeners();
+  }
+
   void controlMenu() {
     if (!_scaffoldKey.currentState!.isDrawerOpen) {
       _scaffoldKey.currentState!.openDrawer();
     }
-  }
-
-  void changePage(DashboardPage page) {
-    _currentPage = page;
-    notifyListeners();
   }
 }

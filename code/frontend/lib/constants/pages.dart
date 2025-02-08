@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 enum DashboardPage {
   dashboard,
-  predict,  // Added predict page
+  predict,
+  predictDemand,
+  predictCommands,
+  gallery,
   products,
   inbox,
   orderLists,

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../utils/responsive.dart';
 import 'package:provider/provider.dart';
-import '../controllers/menu_app_controller.dart';
 import '../constants/style.dart';
+import '../controllers/menu_app_controller.dart';
+import '../utils/responsive.dart';
 
 class Header extends StatelessWidget {
   final String title;
@@ -34,12 +34,11 @@ class Header extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // Always show the menu button on mobile and tablet
           if (!Responsive.isDesktop(context))
             IconButton(
-              icon: const Icon(Icons.menu),
-              onPressed: () {
-                context.read<MenuAppController>().controlMenu();
-              },
+              icon: Icon(Icons.menu),
+              onPressed: context.read<MenuAppController>().controlMenu,
             ),
           const SizedBox(width: defaultPadding),
           Text(

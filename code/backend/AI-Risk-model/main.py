@@ -69,6 +69,17 @@ async def predict(data: InputData):
     except Exception as e:
         return {"error": str(e)}
 
+@app.post("/predict_commands/")
+async def predict_commands(data: dict):
+    try:
+        # Example response - replace with actual ML model prediction
+        # This is a placeholder that returns a random number between 10 and 100
+        import random
+        predicted_commands = random.randint(10, 100)
+        return {"predicted_commands": predicted_commands}
+    except Exception as e:
+        return {"error": str(e)}
+
 # Run the FastAPI app
 if __name__ == "__main__":
     import uvicorn

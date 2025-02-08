@@ -186,14 +186,6 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
     );
   }
 
-  Widget _buildInfoHeader() {
-    return PageHeader(
-      title: "Delivery Risk Assessment",
-      subtitle: "Fill in all fields to get an accurate prediction of delivery risks",
-      icon: Icons.analytics,
-    );
-  }
-
   Widget _buildResultPanel() {
     return Container(
       padding: EdgeInsets.all(defaultPadding),
@@ -232,39 +224,6 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
               ),
             ),
           // Add additional information or tips here
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: EdgeInsets.all(defaultPadding),
-      decoration: BoxDecoration(
-        color: primaryColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: primaryColor.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.analytics, color: primaryColor, size: 32),
-          SizedBox(width: defaultPadding),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Delivery Risk Assessment",
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                "Fill in the details below to predict delivery risks",
-                style: TextStyle(color: Colors.white70),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -546,9 +505,7 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildInfoHeader(),
-          Divider(height: defaultPadding * 2),
-          Form(
+          Form(  // Removed _buildInfoHeader() and just use Form directly
             key: _formKey,
             child: Column(
               children: [
