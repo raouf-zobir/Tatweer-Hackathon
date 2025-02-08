@@ -97,7 +97,10 @@ The system uses OpenRouteService API to:
   - **Planned Delay**: Deviation from original schedule
   - **Real-Time Delay**: Updated ETA based on current position
 - Automatically trigger AI agent responses when delays are detected
+## System Explanation: How It Works  
+Below is a brief explanation of how our system functions
 
+![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/image.png)
 ## How to Run
 
 ### Prerequisites
