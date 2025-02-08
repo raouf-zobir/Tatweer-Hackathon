@@ -1,4 +1,4 @@
-# Intelligent Supply Chain and Travel ETA Management System
+# Real-Time Supply Chain Monitoring and Adaptation System
 
 ## Overview
 This project combines real-time supply chain monitoring and travel ETA (Estimated Time of Arrival) delay detection. It leverages intelligent AI-driven decision-making and real-time tracking to ensure smooth operations across logistics, production, and travel management.
