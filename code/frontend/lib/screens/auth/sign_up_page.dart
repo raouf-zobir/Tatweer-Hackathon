@@ -1,28 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../constants/style.dart';
-import '../../providers/auth_provider.dart';
 import '../main/main_screen.dart';
-import 'sign_up_page.dart';
+import 'login_page.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({Key? key}) : super(key: key);
+class SignUpPage extends StatefulWidget {
+  const SignUpPage({Key? key}) : super(key: key);
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<SignUpPage> createState() => _SignUpPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _SignUpPageState extends State<SignUpPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
   String _errorMessage = '';
-  bool _acceptedTerms = false;
 
-  Future<void> _login() async {
-    if (!_acceptedTerms) {
-      setState(() => _errorMessage = 'Please accept the terms and conditions');
+  Future<void> _signUp() async {
+    if (_passwordController.text != _confirmPasswordController.text) {
+      setState(() => _errorMessage = 'Passwords do not match');
       return;
     }
 
@@ -32,15 +30,15 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // Attempt Firebase login
+      // Attempt Firebase sign-up
       UserCredential userCredential =
-          await FirebaseAuth.instance.signInWithEmailAndPassword(
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
       if (userCredential.user != null && mounted) {
-        // Navigate to the main screen if login is successful
+        // Navigate to the main screen if sign-up is successful
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => MainScreen()),
         );
@@ -48,72 +46,21 @@ class _LoginPageState extends State<LoginPage> {
     } on FirebaseAuthException catch (e) {
       // Handle Firebase Auth errors
       setState(() {
-        if (e.code == 'user-not-found') {
-          _errorMessage = 'No user found for this email.';
-        } else if (e.code == 'wrong-password') {
-          _errorMessage = 'Incorrect password.';
+        if (e.code == 'email-already-in-use') {
+          _errorMessage = 'The email address is already in use.';
+        } else if (e.code == 'weak-password') {
+          _errorMessage = 'The password provided is too weak.';
         } else {
-          _errorMessage = 'Login failed. ${e.message}';
+          _errorMessage = 'Sign-up failed. ${e.message}';
         }
       });
       // Print the error to the console
-      print('Login failed: ${e.message}');
+      print('Sign-up failed: ${e.message}');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
-  }
-
-  void _showTerms() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Terms & Conditions'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              Text(
-                '1. Acceptance of Terms\n',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(
-                'By accessing and using this dashboard, you accept and agree to be bound by the terms and provision of this agreement.\n\n',
-              ),
-              Text(
-                '2. Use License\n',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(
-                'Permission is granted to temporarily use this dashboard for personal and business monitoring purposes only.\n\n',
-              ),
-              Text(
-                '3. Disclaimer\n',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(
-                'The materials on this dashboard are provided on an "as is" basis.\n\n',
-              ),
-              Text(
-                '4. Limitations\n',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(
-                'In no event shall the company or its suppliers be liable for any damages arising out of the use or inability to use the materials on the dashboard.',
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -137,7 +84,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: defaultPadding),
               Text(
-                "Welcome Back",
+                "Create Account",
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -177,30 +124,21 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: defaultPadding * 2),
-              Row(
-                children: [
-                  Checkbox(
-                    value: _acceptedTerms,
-                    onChanged: (value) {
-                      setState(() => _acceptedTerms = value ?? false);
-                    },
-                  ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: _showTerms,
-                      child: const Text(
-                        'I accept the terms and conditions',
-                        style: TextStyle(
-                          decoration: TextDecoration.underline,
-                          color: Colors.blue,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(height: defaultPadding),
+              TextField(
+                controller: _confirmPasswordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  hintText: "Confirm Password",
+                  fillColor: bgColor,
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: defaultPadding * 2),
               Row(
                 children: [
                   Expanded(
@@ -212,11 +150,11 @@ class _LoginPageState extends State<LoginPage> {
                           vertical: defaultPadding,
                         ),
                       ),
-                      onPressed: _isLoading ? null : _login,
+                      onPressed: _isLoading ? null : _signUp,
                       child: _isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
                           : const Text(
-                              "Login",
+                              "Sign Up",
                               style: TextStyle(fontSize: 16),
                             ),
                     ),
@@ -228,18 +166,18 @@ class _LoginPageState extends State<LoginPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text(
-                    "Don't have an account?",
+                    "Already have an account?",
                     style: TextStyle(color: Colors.white),
                   ),
                   TextButton(
                     onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                            builder: (context) => const SignUpPage()),
+                            builder: (context) => const LoginPage()),
                       );
                     },
                     child: const Text(
-                      "Sign Up",
+                      "Login",
                       style: TextStyle(color: Colors.blue),
                     ),
                   ),
@@ -256,6 +194,7 @@ class _LoginPageState extends State<LoginPage> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 }
