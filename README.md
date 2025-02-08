@@ -2,7 +2,7 @@
 
 ## Overview
 An intelligent supply chain management solution powered by LLaMA-70B that provides real-time monitoring and adaptive response to logistics challenges. The system actively monitors, detects, analyzes, and autonomously responds to supply chain disruptions while continuously learning from historical data.
-
+![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot_33.png)
 ## Key Features
 
 ### Intelligent AI Agent System
@@ -12,7 +12,7 @@ An intelligent supply chain management solution powered by LLaMA-70B that provid
 - Smart scheduling and calendar management
 - Automated stakeholder notification system
 - Human-in-the-loop confirmation for critical decisions
-
+![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot_35.png)
 ### Real-Time Monitoring Capabilities
 - Multi-facility monitoring (Ports, Factories, Distribution Centers)
 - Real-time tracking of:
