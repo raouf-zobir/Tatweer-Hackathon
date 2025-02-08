@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -15,13 +16,14 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
   bool _isListening = false;
   bool _isLoading = false;
   bool _showSpeechButton = true;
+  bool _speechAvailable = false;
   List<Map<String, String>> _chatHistory = [];
   AnimationController? _animationController;
 
   @override
   void initState() {
     super.initState();
-    _initializeSpeech();
+    _checkPermissionsAndInitialize();
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -29,53 +31,88 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
     _fetchInitializationMessage();
   }
 
-  void _initializeSpeech() async {
-    bool available = await _speech.initialize(
-      onStatus: (status) => print('Speech status: $status'),
-      onError: (error) => print('Speech error: $error'),
-    );
-    if (!available) {
-      _showMessage('Speech recognition not available');
-    }
-  }
-
-  void _handleSpeechButtonPressed() {
-    if (_isListening) {
-      _stopListening();
+  Future<void> _checkPermissionsAndInitialize() async {
+    // Check microphone permission
+    if (await Permission.microphone.request().isGranted) {
+      await _initializeSpeech();
     } else {
-      _startListening();
+      _showMessage('Microphone permission is required');
     }
   }
 
-  void _startListening() async {
-    if (!_isListening) {
-      bool available = await _speech.initialize(
-        onStatus: (status) => print('Speech status: $status'),
-        onError: (error) => print('Speech error: $error'),
+  Future<void> _initializeSpeech() async {
+    try {
+      _speechAvailable = await _speech.initialize(
+        onError: (error) => _handleSpeechError(error.errorMsg),
+        debugLogging: true,
       );
-      if (available) {
+      setState(() {});
+      
+      if (!_speechAvailable) {
+        _showMessage('Speech recognition not available on this device');
+      }
+    } catch (e) {
+      _showMessage('Error initializing speech: $e');
+      _speechAvailable = false;
+      setState(() {});
+    }
+  }
+
+  void _handleSpeechError(String error) {
+    print('Speech recognition error: $error');
+    _showMessage('Speech recognition error: $error');
+    setState(() {
+      _isListening = false;
+    });
+  }
+
+  Future<void> _startListening() async {
+    if (!_speechAvailable) {
+      _showMessage('Speech recognition not available. Please check browser permissions.');
+      return;
+    }
+
+    try {
+      if (await Permission.microphone.isGranted) {
         setState(() => _isListening = true);
+        
         await _speech.listen(
           onResult: (result) {
-            if (_isListening) {  // Only update text if still listening
-              setState(() => _textController.text = result.recognizedWords);
-            }
+            setState(() {
+              _textController.text = result.recognizedWords;
+            });
           },
-          listenFor: Duration(seconds: 15), // Limit listening time
-          pauseFor: Duration(seconds: 1), // Pause time before auto-stop
-          onSoundLevelChange: (level) => print('Sound level: $level'), // Can be used for UI animations
+          listenFor: Duration(seconds: 30),
+          pauseFor: Duration(seconds: 3),
+          partialResults: true,
+          onSoundLevelChange: null,
+          cancelOnError: true,
+          listenMode: stt.ListenMode.dictation,
         );
       } else {
-        _showMessage('Speech recognition not available');
+        _showMessage('Microphone permission denied');
       }
+    } catch (e) {
+      _showMessage('Error starting speech recognition: $e');
+      setState(() => _isListening = false);
     }
   }
 
-  void _stopListening() async {
-    if (_speech.isListening) {
+  Future<void> _stopListening() async {
+    try {
       await _speech.stop();
+      setState(() => _isListening = false);
+    } catch (e) {
+      _showMessage('Error stopping speech recognition: $e');
     }
-    setState(() => _isListening = false);
+  }
+
+  void _handleSpeechButtonPressed() async {
+    if (_isListening) {
+      await _stopListening();
+    } else {
+      await _startListening();
+    }
   }
 
   Future<void> _fetchInitializationMessage() async {
@@ -105,7 +142,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
       _showMessage('Please enter a message');
       return;
     }
-
     // Stop listening if active when submitting
     _stopListening();
 
@@ -140,31 +176,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
     _scrollToBottom();
   }
 
-  Future<void> _handleUserDecision(String decision) async {
-    setState(() => _isLoading = true);
-    try {
-      final response = await http.post(
-        Uri.parse('http://localhost:8000/user_decision'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'decision': decision}),
-      );
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        setState(() {
-          _isLoading = false;
-          _chatHistory.add({'ai': responseData['response']});
-        });
-      } else {
-        _showMessage('Error: ${response.reasonPhrase}');
-        setState(() => _isLoading = false);
-      }
-    } catch (e) {
-      _showMessage('Error: $e');
-      setState(() => _isLoading = false);
-    }
-    _scrollToBottom();
-  }
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -306,28 +318,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
                     IconButton(
                       icon: Icon(Icons.send, color: Colors.blue),
                       onPressed: _handleSubmit,
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () => _handleUserDecision('approve'),
-                      child: Text('Approve'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => _handleUserDecision('modify'),
-                      child: Text('Modify'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => _handleUserDecision('explain'),
-                      child: Text('Explain'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => _handleUserDecision('cancel'),
-                      child: Text('Cancel'),
                     ),
                   ],
                 ),

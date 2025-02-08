@@ -21,51 +21,6 @@ class CalendarTool(BaseTool):
     event_id: str = Field(default=None, description='Event ID for editing or deleting')
     delay_hours: int = Field(default=None, description='Number of hours to delay the event')
 
-    # Add synthetic calendar data
-    SYNTHETIC_SCHEDULE: ClassVar[Dict[str, Any]] = {
-        "shipping_routes": [
-            {
-                "id": "SHIP001",
-                "summary": "Truck Delivery: Raw Materials",
-                "start_time": "09:00",
-                "location": "Warehouse A",
-                "description": "Daily raw materials delivery from supplier"
-            },
-            {
-                "id": "SHIP002",
-                "summary": "Container Shipment: Export Products",
-                "start_time": "14:00",
-                "location": "Port Terminal B",
-                "description": "Weekly international shipping"
-            }
-        ],
-        "production_schedule": [
-            {
-                "id": "PROD001",
-                "summary": "Production Line A: Electronics Assembly",
-                "start_time": "07:00",
-                "location": "Factory X",
-                "description": "Daily production run"
-            },
-            {
-                "id": "PROD002",
-                "summary": "Quality Control Check",
-                "start_time": "16:00",
-                "location": "QC Lab",
-                "description": "Daily quality inspection"
-            }
-        ],
-        "maintenance": [
-            {
-                "id": "MAINT001",
-                "summary": "Equipment Maintenance: Line A",
-                "start_time": "06:00",
-                "location": "Factory X",
-                "description": "Weekly preventive maintenance"
-            }
-        ]
-    }
-
     def get_credentials(self):
         """
         Get and refresh Google Calendar API credentials
@@ -203,94 +158,44 @@ class CalendarTool(BaseTool):
             return f"An error occurred: {error}"
 
     def initialize_synthetic_calendar(self):
-        """
-        Populates the calendar with synthetic data for testing
-        """
+        """Populates the calendar with synthetic data from EventMonitor"""
         try:
             creds = self.get_credentials()
             service = build("calendar", "v3", credentials=creds)
             
-            # Get today's date
+            # Get events from EventMonitor instead
+            event_monitor = EventMonitor(action="check_all")
+            all_events = event_monitor.SYNTHETIC_EVENTS
+            
             today = datetime.datetime.now().date()
             events_created = []
-
+            
             # Create events for next 7 days
             for day in range(7):
                 current_date = today + datetime.timedelta(days=day)
                 
-                # Add shipping routes
-                for route in self.SYNTHETIC_SCHEDULE["shipping_routes"]:
-                    if day % (2 if "Weekly" in route["description"] else 1) == 0:  # Weekly or daily
-                        event_datetime = datetime.datetime.combine(
-                            current_date,
-                            datetime.datetime.strptime(route["start_time"], "%H:%M").time()
-                        )
-                        
-                        event = {
-                            'summary': route["summary"],
-                            'location': route["location"],
-                            'description': route["description"],
-                            'start': {
-                                'dateTime': event_datetime.isoformat(),
-                                'timeZone': 'UTC',
-                            },
-                            'end': {
-                                'dateTime': (event_datetime + datetime.timedelta(hours=2)).isoformat(),
-                                'timeZone': 'UTC',
-                            },
-                        }
-                        
-                        created_event = service.events().insert(calendarId='primary', body=event).execute()
-                        events_created.append(created_event['id'])
-
-                # Add production schedule
-                for prod in self.SYNTHETIC_SCHEDULE["production_schedule"]:
+                for event_id, event_data in all_events.items():
                     event_datetime = datetime.datetime.combine(
                         current_date,
-                        datetime.datetime.strptime(prod["start_time"], "%H:%M").time()
+                        datetime.datetime.strptime("09:00", "%H:%M").time()
                     )
                     
                     event = {
-                        'summary': prod["summary"],
-                        'location': prod["location"],
-                        'description': prod["description"],
+                        'summary': f"{event_data['type'].title()}: {event_data['details']}",
+                        'location': event_data['location'],
+                        'description': f"Event ID: {event_id}\nStatus: {event_data['status']}\nImpact: {', '.join(event_data['impact'])}",
                         'start': {
                             'dateTime': event_datetime.isoformat(),
                             'timeZone': 'UTC',
                         },
                         'end': {
-                            'dateTime': (event_datetime + datetime.timedelta(hours=8)).isoformat(),
+                            'dateTime': (event_datetime + datetime.timedelta(hours=2)).isoformat(),
                             'timeZone': 'UTC',
                         },
                     }
                     
                     created_event = service.events().insert(calendarId='primary', body=event).execute()
                     events_created.append(created_event['id'])
-
-                # Add maintenance (weekly)
-                if day % 7 == 0:
-                    for maint in self.SYNTHETIC_SCHEDULE["maintenance"]:
-                        event_datetime = datetime.datetime.combine(
-                            current_date,
-                            datetime.datetime.strptime(maint["start_time"], "%H:%M").time()
-                        )
-                        
-                        event = {
-                            'summary': maint["summary"],
-                            'location': maint["location"],
-                            'description': maint["description"],
-                            'start': {
-                                'dateTime': event_datetime.isoformat(),
-                                'timeZone': 'UTC',
-                            },
-                            'end': {
-                                'dateTime': (event_datetime + datetime.timedelta(hours=4)).isoformat(),
-                                'timeZone': 'UTC',
-                            },
-                        }
-                        
-                        created_event = service.events().insert(calendarId='primary', body=event).execute()
-                        events_created.append(created_event['id'])
 
             return f"Successfully created {len(events_created)} events"
 
