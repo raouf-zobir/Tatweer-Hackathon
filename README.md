@@ -37,6 +37,11 @@ An intelligent supply chain management solution powered by LLaMA-70B that provid
 - Coordinated response planning
 ![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot_36.png)
 
+![Screenshot 1]([https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot_36.png](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot%202025-02-08%20225520.png))
+
+
+![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot%202025-02-08%20225431.png)
+
 ## Example Operation
 ```
 Operational Update and Issue Management Example:
