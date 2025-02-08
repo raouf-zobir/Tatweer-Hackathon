@@ -564,25 +564,108 @@ class _CalendarPageState extends State<CalendarPage> {
 
   Widget _buildEventCard(ScheduleEvent event, int index) {
     return Card(
-      margin: EdgeInsets.only(bottom: defaultPadding),
-      child: ListTile(
-        leading: Container(
-          width: 4,
-          color: event.color,
+      elevation: 4,
+      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(15),
+          gradient: LinearGradient(
+            colors: [
+              event.color.withOpacity(0.15),
+              event.color.withOpacity(0.05),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
         ),
-        title: Text(event.title),
-        subtitle: Text(event.description),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Column(
           children: [
-            Text(
-              '${event.startTime.format(context)} - ${event.endTime.format(context)}',
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: event.color.withOpacity(0.1),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(15),
+                  topRight: Radius.circular(15),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: event.color.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.calendar_today,
+                      color: event.color,
+                      size: 20,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          event.title,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.access_time,
+                              size: 14,
+                              color: Colors.white70,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                            event.description,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white70,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.access_time,
+                              size: 16,
+                              color: event.color,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              '${event.startTime.format(context)} - ${event.endTime.format(context)}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-            IconButton(
-              icon: Icon(Icons.more_vert),
-              onPressed: () => _showEventOptions(event, index),
-            ),
-          ],
+          ),
         ),
       ),
     );
