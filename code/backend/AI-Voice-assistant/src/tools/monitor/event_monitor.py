@@ -12,19 +12,102 @@ class EventMonitor(BaseTool):
 
     # Fix: Add ClassVar annotation for the synthetic data
     SYNTHETIC_EVENTS: ClassVar[Dict[str, Any]] = {
-        "TRUCK123": {
+        # Logistics Delays
+        "MAERSK_T123": {
             "type": "logistics",
             "status": "delayed",
-            "delay_hours": 3,
-            "location": "checkpoint B",
-            "impact": ["Factory_X_Production", "Customer_Delivery_A"],
+            "delay_hours": 4,
+            "location": "Port of Jeddah",
+            "impact": ["Samsung_Factory_A", "Regional_Distribution_Center"],
+            "details": "Container shipment delayed due to port congestion"
         },
-        "PROD456": {
-            "type": "production",
+        "DHL_TR789": {
+            "type": "logistics",
+            "status": "delayed",
+            "delay_hours": 2,
+            "location": "Dammam Highway Checkpoint",
+            "impact": ["LG_Assembly_Line", "Gulf_Distribution_Hub"],
+            "details": "Truck delivery delayed due to road maintenance"
+        },
+
+        # Manufacturing Equipment Issues
+        "SIEMENS_M456": {
+            "type": "equipment_failure",
+            "status": "breakdown",
+            "delay_hours": 6,
+            "location": "SABIC Petrochem Plant",
+            "impact": ["Chemical_Processing_A", "Packaging_Line_B", "Customer_Delivery_X"],
+            "details": "Critical pump failure in processing unit",
+            "repair_estimate": "6 hours"
+        },
+        "ABB_ROB334": {
+            "type": "equipment_failure",
+            "status": "maintenance",
+            "delay_hours": 3,
+            "location": "Toyota Assembly Riyadh",
+            "impact": ["Vehicle_Assembly", "Quality_Control", "Dealer_Network"],
+            "details": "Robotic arm malfunction on main assembly line",
+            "repair_estimate": "3 hours"
+        },
+
+        # Raw Material Shortages
+        "RM_TSMC_001": {
+            "type": "material_shortage",
+            "status": "critical",
+            "delay_hours": 48,
+            "location": "Semiconductor Facility",
+            "impact": ["iPhone_Production", "Electronics_Assembly", "Apple_Distribution"],
+            "details": "Silicon wafer shortage affecting chip production",
+            "inventory_level": "15%"
+        },
+        "RM_BASF_207": {
+            "type": "material_shortage",
+            "status": "warning",
+            "delay_hours": 24,
+            "location": "Chemical Plant Yanbu",
+            "impact": ["Polymer_Production", "Plastic_Molding", "Packaging_Supply"],
+            "details": "Low catalyst inventory affecting polymer production",
+            "inventory_level": "30%"
+        },
+
+        # Inventory Stock-outs
+        "INV_UNILEVER_554": {
+            "type": "stock_out",
+            "status": "critical",
+            "delay_hours": 12,
+            "location": "Jeddah Distribution Center",
+            "impact": ["Carrefour_KSA", "Panda_Retail", "LuLu_Group"],
+            "details": "Personal care products stock-out affecting major retailers",
+            "affected_skus": 15
+        },
+        "INV_PEPSI_332": {
+            "type": "stock_out",
+            "status": "warning",
+            "delay_hours": 8,
+            "location": "Riyadh Warehouse",
+            "impact": ["AlOthaim_Markets", "Danube_Stores", "SPAR_KSA"],
+            "details": "Beverage stock-out in central region",
+            "affected_skus": 7
+        },
+
+        # Production Delays
+        "PROD_TESLA_889": {
+            "type": "production_delay",
+            "status": "delayed",
+            "delay_hours": 10,
+            "location": "Gigafactory Middle East",
+            "impact": ["Vehicle_Assembly", "Battery_Production", "Delivery_Centers"],
+            "details": "Production line reconfiguration causing delays",
+            "completion_estimate": "85%"
+        },
+        "PROD_NESTLE_445": {
+            "type": "production_delay",
             "status": "at_risk",
-            "issue": "material_shortage",
-            "location": "Factory_X",
-            "impact": ["Customer_Delivery_B", "Inventory_Level_C"],
+            "delay_hours": 5,
+            "location": "Food Processing Plant",
+            "impact": ["Retail_Distribution", "Export_Division", "Cold_Storage"],
+            "details": "Quality control issues in dairy production line",
+            "completion_estimate": "70%"
         }
     }
 

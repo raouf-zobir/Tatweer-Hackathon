@@ -27,27 +27,39 @@ tools_list = [
 agent = Agent("Assistant Agent", model, tools_list, system_prompt=assistant_prompt)
 
 async def handle_command(agent, command):
-    """Handle a single command with retries"""
+    """Handle natural language input from user"""
     max_retries = 3
-    retry_delay = 20  # seconds
+    retry_delay = 20
     
     for attempt in range(max_retries):
         try:
-            response = agent.invoke(command)
+            # Enhance command with context for better understanding
+            enhanced_command = (
+                f"User input: '{command}'\n"
+                f"Based on this input, understand the user's intent and:\n"
+                f"1. Determine if this requires any operational actions\n"
+                f"2. If yes, execute appropriate tools and provide results\n"
+                f"3. If no, provide a natural conversational response\n"
+                f"4. Always maintain context and provide helpful information"
+            )
+            
+            response = agent.invoke(enhanced_command)
             if response and response != "None":
                 return response
+            
             if attempt < max_retries - 1:
                 print(f"\nRetrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
             else:
-                return "I'm having trouble processing that request. Please try again later."
+                return "I need more clarity about what you'd like me to do. Could you explain further?"
+                
         except Exception as e:
             print(f"\nError (attempt {attempt + 1}/{max_retries}): {str(e)}")
             if attempt < max_retries - 1:
                 print(f"Retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
             else:
-                return "I encountered an error. Please try again later."
+                return "I encountered an error. Could you try expressing that differently?"
 
 async def direct_tool_call(tool_class, **kwargs):
     """Call tools directly without going through the LLM"""
@@ -138,7 +150,7 @@ async def generate_comprehensive_summary(calendar_status, issues, proposed_chang
     return summary
 
 async def handle_change_confirmation(agent, changes, issues):
-    """Handle change proposals with natural language interaction"""
+    """Handle change proposals with natural conversation"""
     try:
         # Get current calendar status
         calendar_status = await direct_tool_call(CalendarTool, action="view")
@@ -147,34 +159,37 @@ async def handle_change_confirmation(agent, changes, issues):
         summary = await generate_comprehensive_summary(calendar_status, issues, changes)
         print(summary)
         
-        print("\n=== ACTION REQUIRED ===")
-        print("Please review the above summary and choose:")
-        print("1. 'approve' - Apply all changes as described")
-        print("2. 'modify' - Adjust specific changes")
-        print("3. 'explain' - Get more details about specific changes")
-        print("4. 'cancel' - Cancel all changes")
+        print("\nPlease let me know what you think about these changes.")
         
         while True:
-            user_input = input("\nYour decision: ").strip().lower()
+            user_input = input("\nYou: ").strip()
             
-            if any(word in user_input for word in ['yes', 'approve', 'accept', 'proceed', 'do this']):
+            # Let the agent interpret the response naturally
+            response = await handle_command(agent, 
+                f"Regarding the proposed changes, the user said: '{user_input}'\n"
+                f"Current changes: {changes}\n"
+                f"Based on this, determine if the user:\n"
+                f"1. Wants to proceed with changes\n"
+                f"2. Wants to cancel changes\n"
+                f"3. Needs modifications\n"
+                f"4. Needs more explanation\n"
+                f"5. Has other concerns\n"
+                f"Then take appropriate action."
+            )
+            
+            # Let the agent's response guide the next steps
+            if "PROCEED" in response:
                 return await apply_approved_changes(changes, summary)
-            
-            elif any(word in user_input for word in ['no', 'cancel', 'reject', 'stop']):
-                return "Changes cancelled. Let me know if you'd like to explore other options."
-            
-            elif any(word in user_input for word in ['modify', 'change', 'adjust', 'different']):
+            elif "EXPLAIN" in response:
+                print(f"\n{response.split('EXPLAIN: ')[1]}")
+                print("\nWould you like to proceed with the changes now?")
+            elif "MODIFY" in response:
                 return await handle_modification_request(agent, user_input, changes, issues)
-            
-            elif 'explain' in user_input:
-                print("\nWhat specific aspect would you like me to explain?")
-                aspect = input("Your question: ")
-                response = await agent.invoke(f"Explain this aspect of the changes: {aspect}")
-                print(f"\nAssistant: {response}")
-                print("\nWould you like to proceed with the changes?")
-            
+            elif "CANCEL" in response:
+                return "Changes cancelled. Let me know if you'd like to explore other options."
             else:
-                print("\nI didn't understand. Please use 'approve', 'modify', 'explain', or 'cancel'.")
+                print(f"\n{response}")
+
     except Exception as e:
         return f"Error during confirmation: {str(e)}"
 
