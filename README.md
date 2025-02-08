@@ -197,10 +197,6 @@ This repository contains a project designed to predict key outcomes in transport
    python server.py
    ```
 
-2. **Run the travel ETA script:**
-   ```sh
-   python travel_eta.py
-   ```
 
 The system will:
 - Monitor the supply chain in real-time.
