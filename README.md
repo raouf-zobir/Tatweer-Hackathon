@@ -89,7 +89,6 @@ Operational Update and Issue Management Example:
 
 ## System Components
 
-![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/image.png)
 
 ### Delay Detector
 The system uses OpenRouteService API to:
