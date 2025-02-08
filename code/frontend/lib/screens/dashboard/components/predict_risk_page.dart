@@ -537,9 +537,7 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildInfoHeader(),
-          Divider(height: defaultPadding * 2),
-          Form(
+          Form(  // Removed _buildInfoHeader() and just use Form directly
             key: _formKey,
             child: Column(
               children: [

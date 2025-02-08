@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../constants/pages.dart';
 import '../../constants/style.dart';
 import '../dashboard/dashboard_screen.dart';
+import '../dashboard/components/predict_risk_page.dart';
+import '../dashboard/components/predict_demand_page.dart';
+// import '../dashboard/components/predict_commands_page.dart';
 import '../components/dashboard_header.dart';
 import '../auth/logout_page.dart';
 import 'terms_page.dart';
@@ -12,6 +15,7 @@ import 'ai_assistant_page.dart';
 import '../dashboard/components/predict_risk_page.dart';
 import '../../responsive.dart';
 import '../../components/page_title.dart';
+import '../dashboard/components/gallery_page.dart';
 
 class PageContainer extends StatelessWidget {
   final DashboardPage currentPage;
@@ -66,6 +70,12 @@ class PageContainer extends StatelessWidget {
         return  AIAssistantPage();
       case DashboardPage.predict:
         return PredictRiskPage();
+      case DashboardPage.predictDemand:
+        return PredictDemandPage();
+      case DashboardPage.predictCommands:
+        return PredictDemandPage();
+      case DashboardPage.gallery:
+        return GalleryPage();
       default:
         return ResponsivePage(
           title: "Page Not Found",

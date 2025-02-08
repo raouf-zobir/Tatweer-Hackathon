@@ -9,7 +9,6 @@ import 'package:admin/screens/auth/login_page.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/theme_provider.dart';
-import 'screens/pages/ai_assistant_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,27 +36,26 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => MenuAppController()),
-        ChangeNotifierProvider(create: (_) => DashboardProvider()),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-      ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) {
-          return MaterialApp(
-            debugShowCheckedModeBanner: false,
-            title: 'Admin Dashboard',
-            themeMode: themeProvider.themeMode,
-            theme: themeProvider.getLightTheme(context),
-            darkTheme: themeProvider.getDarkTheme(context),
-            home: const LoginPage(),
-            routes: {
-              '/ai-assistant': (context) => AIAssistantPage(),
-            },
-          );
-        },
+    return ChangeNotifierProvider(
+      create: (context) => MenuAppController(),
+      child: MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
+          ChangeNotifierProvider(create: (_) => DashboardProvider()),
+          ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ],
+        child: Consumer<ThemeProvider>(
+          builder: (context, themeProvider, child) {
+            return MaterialApp(
+              debugShowCheckedModeBanner: false,
+              title: 'Admin Dashboard',
+              themeMode: themeProvider.themeMode,
+              theme: themeProvider.getLightTheme(context),
+              darkTheme: themeProvider.getDarkTheme(context),
+              home: const LoginPage(),
+            );
+          },
+        ),
       ),
     );
   }

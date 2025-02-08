@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/menu_app_controller.dart';
-import '../../constants/pages.dart';
-import 'components/side_menu.dart';
-import '../dashboard/dashboard_screen.dart';
+import '../../utils/responsive.dart';  // Add this import
+import '../../components/side_menu.dart';
 import '../pages/page_container.dart';
 
 class MainScreen extends StatelessWidget {
@@ -16,16 +15,17 @@ class MainScreen extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Show side menu only for large screens
-            if (MediaQuery.of(context).size.width >= 1100) Expanded(child: SideMenu()),
-            
-            // Main content area
+            if (Responsive.isDesktop(context))
+              Expanded(
+                flex: 1,
+                child: SideMenu(),
+              ),
             Expanded(
               flex: 5,
               child: Consumer<MenuAppController>(
-                builder: (context, controller, _) {
-                  return PageContainer(currentPage: controller.currentPage);
-                },
+                builder: (context, controller, _) => PageContainer(
+                  currentPage: controller.currentPage,
+                ),
               ),
             ),
           ],
