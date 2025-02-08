@@ -30,7 +30,6 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
   String? _trafficLevel;
   String? _vehicleType;
   String? _goodsType;
-  String? _driverExperience;
 
   // Updated options for dropdowns
   final _weatherConditions = [
@@ -50,7 +49,6 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
     'Medium Truck',
     'Small Van'
   ];
-
   final _goodsTypes = [
     'Fragile',
     'Perishable',
@@ -79,6 +77,7 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
             'Vehicle_Type': _vehicleType,
             'Driver_Experience_years': int.parse(
                 _driverExperienceController.text), // Updated to use controller
+            'Driver_Experience_years': int.parse(_driverExperienceController.text),
             'Goods_Type': _goodsType,
             'Loading_Weight_kg': double.parse(_loadingWeightController.text),
             'Year_of_Vehicle': int.parse(_vehicleYearController.text)
@@ -507,7 +506,7 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
           "Personnel & Cargo",
           [
             _buildInputField(
-              'Driver Experience (years)', // Updated to input field
+              'Driver Experience (years)',
               _driverExperienceController,
               TextInputType.number,
               icon: Icons.person,

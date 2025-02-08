@@ -15,7 +15,6 @@ import 'ai_assistant_page.dart';
 import '../dashboard/components/predict_risk_page.dart';
 import '../../responsive.dart';
 import '../../components/page_title.dart';
-import '../dashboard/components/gallery_page.dart';
 
 class PageContainer extends StatelessWidget {
   final DashboardPage currentPage;
@@ -34,6 +33,10 @@ class PageContainer extends StatelessWidget {
     switch (page) {
       case DashboardPage.dashboard:
         return DashboardScreen();
+      case DashboardPage.predict:
+        return PredictRiskPage();
+      case DashboardPage.predictDemand:
+        return PredictDemandPage();
       case DashboardPage.products:
         return ResponsivePage(
           title: "Products",
@@ -66,16 +69,6 @@ class PageContainer extends StatelessWidget {
         return const SettingsPage();
       case DashboardPage.logout:
         return const LogoutPage();
-      case DashboardPage.aiAssistant:
-        return  AIAssistantPage();
-      case DashboardPage.predict:
-        return PredictRiskPage();
-      case DashboardPage.predictDemand:
-        return PredictDemandPage();
-      case DashboardPage.predictCommands:
-        return PredictDemandPage();
-      case DashboardPage.gallery:
-        return GalleryPage();
       default:
         return ResponsivePage(
           title: "Page Not Found",
