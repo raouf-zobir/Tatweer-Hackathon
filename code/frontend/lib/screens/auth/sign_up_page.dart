@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../constants/style.dart';
 import '../main/main_screen.dart';
 import 'login_page.dart';
@@ -38,6 +39,15 @@ class _SignUpPageState extends State<SignUpPage> {
       );
 
       if (userCredential.user != null && mounted) {
+        // Save user data in Firestore
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+          'email': _emailController.text.trim(),
+          'createdAt': Timestamp.now(),
+        });
+
         // Navigate to the main screen if sign-up is successful
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => MainScreen()),
