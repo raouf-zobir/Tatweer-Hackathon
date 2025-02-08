@@ -56,10 +56,10 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/firebase_config.json
-    - assets/images/delivery1.jpg
-    - assets/images/warehouse1.jpg
-    - assets/images/truck1.jpg
-    - assets/images/logistics1.jpg
+    # - assets/images/delivery1.jpg
+    # - assets/images/warehouse1.jpg
+    # - assets/images/truck1.jpg
+    # - assets/images/logistics1.jpg
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
