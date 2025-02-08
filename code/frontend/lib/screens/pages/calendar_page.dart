@@ -9,6 +9,7 @@ class ScheduleEvent {
   final TimeOfDay startTime;
   final TimeOfDay endTime;
   final Color color;
+  final String category; // New field
 
   ScheduleEvent({
     required this.title,
@@ -16,6 +17,7 @@ class ScheduleEvent {
     required this.startTime,
     required this.endTime,
     required this.color,
+    this.category = 'Other', // Default category
   });
 }
 
@@ -32,6 +34,11 @@ class _CalendarPageState extends State<CalendarPage> {
   int _selectedDay = DateTime.now().weekday - 1;
   
   final Map<int, List<ScheduleEvent>> _scheduleData = {};
+  DateTime _currentWeekStart = DateTime.now().subtract(
+    Duration(days: DateTime.now().weekday - 1)
+  );
+  String _searchQuery = '';
+  final List<String> _categories = ['Delivery', 'Meeting', 'Break', 'Other'];
 
   Future<void> _saveEventToFirebase(ScheduleEvent event) async {
     try {
@@ -152,6 +159,7 @@ class _CalendarPageState extends State<CalendarPage> {
     TimeOfDay startTime = TimeOfDay(hour: 9, minute: 0);
     TimeOfDay endTime = TimeOfDay(hour: 10, minute: 0);
     Color selectedColor = Colors.blue;
+    String selectedCategory = _categories[0];
 
     final colors = [
       Colors.blue,
@@ -221,6 +229,23 @@ class _CalendarPageState extends State<CalendarPage> {
                   ],
                 ),
                 SizedBox(height: defaultPadding),
+                DropdownButtonFormField<String>(
+                  value: selectedCategory,
+                  decoration: InputDecoration(
+                    labelText: 'Category',
+                    icon: Icon(Icons.category),
+                  ),
+                  items: _categories.map((category) {
+                    return DropdownMenuItem(
+                      value: category,
+                      child: Text(category),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setStateDialog(() => selectedCategory = value!);
+                  },
+                ),
+                SizedBox(height: defaultPadding),
                 Row(
                   children: [
                     Text('Color: '),
@@ -262,12 +287,20 @@ class _CalendarPageState extends State<CalendarPage> {
                   return;
                 }
 
+                if (!_isValidTimeRange(startTime, endTime)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('End time must be after start time')),
+                  );
+                  return;
+                }
+
                 final newEvent = ScheduleEvent(
                   title: titleController.text,
                   description: descriptionController.text,
                   startTime: startTime,
                   endTime: endTime,
                   color: selectedColor,
+                  category: selectedCategory,
                 );
 
                 await _saveEventToFirebase(newEvent);
@@ -671,6 +704,81 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 
+  void _previousWeek() {
+    setState(() {
+      _currentWeekStart = _currentWeekStart.subtract(Duration(days: 7));
+    });
+    _loadEventsFromFirebase();
+  }
+
+  void _nextWeek() {
+    setState(() {
+      _currentWeekStart = _currentWeekStart.add(Duration(days: 7));
+    });
+    _loadEventsFromFirebase();
+  }
+
+  bool _isValidTimeRange(TimeOfDay start, TimeOfDay end) {
+    final now = DateTime.now();
+    final startDateTime = DateTime(
+      now.year, now.month, now.day, start.hour, start.minute);
+    final endDateTime = DateTime(
+      now.year, now.month, now.day, end.hour, end.minute);
+    
+    return endDateTime.isAfter(startDateTime);
+  }
+
+  Widget _buildWeekNavigation() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(
+          icon: Icon(Icons.chevron_left),
+          onPressed: _previousWeek,
+        ),
+        Text(
+          '${_currentWeekStart.day}/${_currentWeekStart.month} - '
+          '${_currentWeekStart.add(Duration(days: 6)).day}/'
+          '${_currentWeekStart.add(Duration(days: 6)).month}',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        IconButton(
+          icon: Icon(Icons.chevron_right),
+          onPressed: _nextWeek,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return TextField(
+      decoration: InputDecoration(
+        hintText: 'Search events...',
+        prefixIcon: Icon(Icons.search),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+      onChanged: (value) {
+        setState(() {
+          _searchQuery = value;
+        });
+      },
+    );
+  }
+
+  List<ScheduleEvent> _getFilteredEvents() {
+    if (!_scheduleData.containsKey(_selectedDay)) {
+      return [];
+    }
+
+    return _scheduleData[_selectedDay]!.where((event) {
+      return event.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+             event.description.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+             event.category.toLowerCase().contains(_searchQuery.toLowerCase());
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -693,6 +801,10 @@ class _CalendarPageState extends State<CalendarPage> {
               ),
               child: Column(
                 children: [
+                  _buildWeekNavigation(),
+                  SizedBox(height: defaultPadding),
+                  _buildSearchBar(),
+                  SizedBox(height: defaultPadding),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -761,17 +873,19 @@ class _CalendarPageState extends State<CalendarPage> {
                   SizedBox(height: defaultPadding),
                   Container(
                     height: 400,
-                    child: _scheduleData.containsKey(_selectedDay)
+                    child: _getFilteredEvents().isNotEmpty
                         ? ListView.builder(
-                            itemCount: _scheduleData[_selectedDay]!.length,
+                            itemCount: _getFilteredEvents().length,
                             itemBuilder: (context, index) {
-                              final event = _scheduleData[_selectedDay]![index];
+                              final event = _getFilteredEvents()[index];
                               return _buildEventCard(event, index);
                             },
                           )
                         : Center(
                             child: Text(
-                              'No events scheduled for ${_weekDays[_selectedDay]}',
+                              _searchQuery.isEmpty
+                                ? 'No events scheduled for ${_weekDays[_selectedDay]}'
+                                : 'No events found matching "${_searchQuery}"',
                               style: TextStyle(color: Colors.grey),
                             ),
                           ),
