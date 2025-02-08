@@ -26,6 +26,20 @@ tools_list = [
 
 agent = Agent("Assistant Agent", model, tools_list, system_prompt=assistant_prompt)
 
+class ResponseAccumulator:
+    def __init__(self):
+        self.response = ""
+    
+    def add(self, text):
+        if text:
+            self.response += f"{text}\n"
+    
+    def get_response(self):
+        return self.response.strip()
+    
+    def clear(self):
+        self.response = ""
+
 async def handle_command(agent, command):
     """Handle natural language input from user"""
     max_retries = 3
@@ -438,50 +452,44 @@ async def handle_modification_request(agent, user_input, changes, issues):
 
 async def startup_sequence(agent):
     """Initial startup sequence to check for problems and show solutions"""
-    print("\nAssistant: Initializing system and checking for operational issues...")
+    response_accumulator = ResponseAccumulator()
+    response_accumulator.add("Initializing system and checking for operational issues...")
     
     try:
-        # Check calendar directly - no initialization
-        print("\nChecking calendar...")
+        response_accumulator.add("\nChecking calendar...")
         calendar_status = await direct_tool_call(CalendarTool, action="view")
-        print("\nCurrent Schedule:")
-        print(calendar_status)
+        response_accumulator.add("\nCurrent Schedule:")
+        response_accumulator.add(calendar_status)
 
-        # Check for issues directly
-        print("\nChecking for operational issues...")
+        response_accumulator.add("\nChecking for operational issues...")
         issues = await direct_tool_call(EventMonitor, action="check_all")
         
         if issues and len(issues) > 0:
             all_changes = []
-            print("\nFound operational issues:")
+            response_accumulator.add("\nFound operational issues:")
             
             for issue in issues:
-                print(f"\n- {issue['type'].title()} issue: {issue['details']}")
+                response_accumulator.add(f"\n- {issue['type'].title()} issue: {issue['details']}")
                 
-                # Get impact analysis
                 impact = await direct_tool_call(EventMonitor, 
                                               action="analyze_impact",
                                               event_id=issue['id'])
-                print(impact)
+                response_accumulator.add(impact)
                 
-                # Get solutions
                 solutions = await direct_tool_call(EventMonitor,
                                                  action="propose_solution",
                                                  event_id=issue['id'])
                 
                 if isinstance(solutions, dict) and 'proposed_actions' in solutions:
                     changes = []
-                    print("\nProposed actions:")
+                    response_accumulator.add("\nProposed actions:")
                     for action in solutions['proposed_actions']:
-                        print(f"  - {action}")
-                        # Convert action to calendar change
+                        response_accumulator.add(f"  - {action}")
                         if "Reschedule" in action:
-                            event_id = issue['id']
-                            delay_hours = 3  # From the action
                             changes.append({
                                 'action': 'edit',
-                                'event_id': event_id,
-                                'delay_hours': delay_hours
+                                'event_id': issue['id'],
+                                'delay_hours': 3
                             })
                     all_changes.extend(changes)
                 
@@ -489,34 +497,39 @@ async def startup_sequence(agent):
             
             if all_changes:
                 result = await handle_change_confirmation(agent, all_changes, issues)
-                print(f"\n{result}")
+                response_accumulator.add(f"\n{result}")
         else:
-            print("\nNo operational issues detected.")
+            response_accumulator.add("\nNo operational issues detected.")
 
     except Exception as e:
-        print(Fore.RED + f"\nError during startup: {str(e)}")
-        print("Continuing with basic operation mode...")
+        response_accumulator.add(f"\nError during startup: {str(e)}")
+        response_accumulator.add("Continuing with basic operation mode...")
     
-    print("\nAssistant: I'm ready to help you manage operations. What would you like to do?")
+    response_accumulator.add("\nI'm ready to help you manage operations. What would you like to do?")
+    return response_accumulator.get_response()
 
 async def text_conversation_loop():
-    print("\nAssistant: Hello! I'm your operations assistant. Type 'quit' to exit.")
+    response_accumulator = ResponseAccumulator()
+    response_accumulator.add("Hello! I'm your operations assistant. Type 'quit' to exit.")
     
     # Run the startup sequence
-    await startup_sequence(agent)
+    startup_response = await startup_sequence(agent)
+    response_accumulator.add(startup_response)
     
     while True:
         user_input = input("\nYou: ").strip()
         
         if user_input.lower() == 'quit':
-            print("Assistant: Goodbye!")
+            response_accumulator.add("Goodbye!")
             break
             
         if user_input:
             response = await handle_command(agent, user_input)
-            print(f"\nAssistant: {response}")
-    # Run the text-based conversation loop
+            response_accumulator.add(f"\nAssistant: {response}")
+    
+    return response_accumulator.get_response()
 
 if __name__ == "__main__":
-    # Run the text-based conversation loop
-    asyncio.run(text_conversation_loop())
+    # Run the text-based conversation loop and get the accumulated response
+    response = asyncio.run(text_conversation_loop())
+    print(response)  # Only print at the end if needed
