@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../constants/style.dart';
 import '../../providers/auth_provider.dart';
 import '../main/main_screen.dart';
@@ -23,26 +24,43 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => _errorMessage = 'Please accept the terms and conditions');
       return;
     }
+
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
 
     try {
-      final success = await context.read<AuthProvider>().login(
-        _emailController.text,
-        _passwordController.text,
+      // Attempt Firebase login
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
 
-      if (success && mounted) {
+      if (userCredential.user != null && mounted) {
+        // Navigate to the main screen if login is successful
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => MainScreen()),
         );
-      } else if (mounted) {
-        setState(() => _errorMessage = 'Invalid credentials');
       }
+    } on FirebaseAuthException catch (e) {
+      // Handle Firebase Auth errors
+      setState(() {
+        if (e.code == 'user-not-found') {
+          _errorMessage = 'No user found for this email.';
+        } else if (e.code == 'wrong-password') {
+          _errorMessage = 'Incorrect password.';
+        } else {
+          _errorMessage = 'Login failed. ${e.message}';
+        }
+      });
+      // Print the error to the console
+      print('Login failed: ${e.message}');
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -120,9 +138,9 @@ class _LoginPageState extends State<LoginPage> {
               Text(
                 "Welcome Back",
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               if (_errorMessage.isNotEmpty) ...[
                 const SizedBox(height: defaultPadding),
@@ -159,7 +177,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: defaultPadding * 2),
-              const SizedBox(height: defaultPadding),
               Row(
                 children: [
                   Checkbox(
@@ -201,27 +218,6 @@ class _LoginPageState extends State<LoginPage> {
                               "Login",
                               style: TextStyle(fontSize: 16),
                             ),
-                    ),
-                  ),
-                  const SizedBox(width: defaultPadding),
-                  // Add bypass button
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: defaultPadding,
-                        vertical: defaultPadding,
-                      ),
-                    ),
-                    onPressed: () {
-                      // Direct access to dashboard
-                      context.read<AuthProvider>().bypassLogin();
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (context) => MainScreen()),
-                      );
-                    },
-                    child: const Text(
-                      "Skip Login",
-                      style: TextStyle(color: Colors.grey),
                     ),
                   ),
                 ],
