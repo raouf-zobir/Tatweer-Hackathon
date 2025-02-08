@@ -1,125 +1,125 @@
 import 'package:flutter/material.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'dart:convert';
 
 class AIAssistantPage extends StatefulWidget {
+  const AIAssistantPage({Key? key}) : super(key: key);
+
   @override
   _AIAssistantPageState createState() => _AIAssistantPageState();
 }
 
-class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProviderStateMixin {
-  final TextEditingController _textController = TextEditingController();
-  final stt.SpeechToText _speech = stt.SpeechToText();
-  final ScrollController _scrollController = ScrollController();
-  bool _isListening = false;
-  bool _isLoading = false;
-  bool _showSpeechButton = true;
-  List<Map<String, String>> _chatHistory = [];
-  AnimationController? _animationController;
+class _AIAssistantPageState extends State<AIAssistantPage> {
+  final TextEditingController _messageController = TextEditingController();
+  final List<ChatMessage> _messages = [];
+  late WebSocketChannel _channel;
+  bool _isConnected = false;
+  Map<String, dynamic>? _currentChanges;
+  Map<String, dynamic>? _currentIssues;
 
   @override
   void initState() {
     super.initState();
-    _initializeSpeech();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..repeat(reverse: true);
+    _connectToWebSocket();
   }
 
-  void _initializeSpeech() async {
-    bool available = await _speech.initialize();
-    if (!available) {
-      _showMessage('Speech recognition not available');
+  void _connectToWebSocket() {
+    try {
+      _channel = WebSocketChannel.connect(
+        Uri.parse('ws://localhost:8000/ws'),
+      );
+      setState(() => _isConnected = true);
+
+      _channel.stream.listen(
+        _handleWebSocketMessage,
+        onError: (error) {
+          print('WebSocket error: $error');
+          setState(() => _isConnected = false);
+        },
+        onDone: () {
+          print('WebSocket connection closed');
+          setState(() => _isConnected = false);
+        },
+      );
+    } catch (e) {
+      print('Failed to connect to WebSocket: $e');
+      setState(() => _isConnected = false);
     }
   }
 
-  void _handleSpeechButtonPressed() {
-    if (_isListening) {
-      _stopListening();
-    } else {
-      _startListening();
-    }
-  }
-
-  void _startListening() async {
-    if (!_isListening) {
-      bool available = await _speech.initialize();
-      if (available) {
-        setState(() => _isListening = true);
-        await _speech.listen(
-          onResult: (result) {
-            if (_isListening) {  // Only update text if still listening
-              setState(() => _textController.text = result.recognizedWords);
-            }
-          },
-          listenFor: Duration(seconds: 15), // Limit listening time
-          pauseFor: Duration(seconds: 1), // Pause time before auto-stop
-          onSoundLevelChange: (level) {}, // Can be used for UI animations
-        );
-      } else {
-        _showMessage('Speech recognition not available');
-      }
-    }
-  }
-
-  void _stopListening() async {
-    if (_speech.isListening) {
-      await _speech.stop();
-    }
-    setState(() => _isListening = false);
-  }
-
-  Future<void> _handleSubmit() async {
-    final message = _textController.text.trim();
-    if (message.isEmpty) {
-      _showMessage('Please enter a message');
-      return;
-    }
-
-    // Stop listening if active when submitting
-    _stopListening();
+  void _handleWebSocketMessage(dynamic message) {
+    final data = jsonDecode(message);
+    final messageType = data['type'];
 
     setState(() {
-      _isLoading = true;
-      _chatHistory.add({'user': message});
-      _textController.clear();
-    });
-    _scrollToBottom();
+      switch (messageType) {
+        case 'startup':
+        case 'response':
+          _messages.add(ChatMessage(
+            text: data['message'],
+            isUser: false,
+          ));
+          break;
 
-    // Simulated AI processing
-    await Future.delayed(Duration(seconds: 1));
-    
-    setState(() {
-      _isLoading = false;
-      _chatHistory.add({'ai': 'AI Response to: $message'});
-    });
-    _scrollToBottom();
-  }
+        case 'change_proposal':
+          _currentChanges = data['changes'];
+          _currentIssues = data['issues'];
+          _messages.add(ChatMessage(
+            text: "${data['message']}\n\nDo you want to approve these changes?",
+            isUser: false,
+          ));
+          break;
 
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        case 'changes_applied':
+        case 'change_cancelled':
+          _currentChanges = null;
+          _currentIssues = null;
+          _messages.add(ChatMessage(
+            text: data['message'],
+            isUser: false,
+          ));
+          break;
+
+        case 'error':
+          _messages.add(ChatMessage(
+            text: "Error: ${data['message']}",
+            isUser: false,
+          ));
+          break;
       }
     });
   }
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
-  @override
-  void dispose() {
-    _stopListening(); // Ensure speech is stopped when disposing
-    _animationController?.dispose();
-    _scrollController.dispose();
-    super.dispose();
+  void _sendMessage() {
+    if (_messageController.text.isNotEmpty) {
+      final message = _messageController.text;
+      setState(() {
+        _messages.add(ChatMessage(
+          text: message,
+          isUser: true,
+        ));
+      });
+      
+      if (_isConnected) {
+        // If there are pending changes, send as change confirmation
+        if (_currentChanges != null && _currentIssues != null) {
+          _channel.sink.add(jsonEncode({
+            'type': 'change_confirmation',
+            'changes': _currentChanges,
+            'issues': _currentIssues,
+            'user_response': message,
+          }));
+        } else {
+          // Regular message
+          _channel.sink.add(jsonEncode({
+            'type': 'message',
+            'content': message,
+          }));
+        }
+      }
+      
+      _messageController.clear();
+    }
   }
 
   @override
@@ -129,111 +129,38 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
         title: Text('AI Assistant'),
         actions: [
           IconButton(
-            icon: Icon(Icons.help_outline),
-            onPressed: () => showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: Text('Help'),
-                content: Text('Type your message or use the microphone to speak. '
-                    'Tap send to get AI response.'),
-                actions: [
-                  TextButton(
-                    child: Text('OK'),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
+            icon: Icon(_isConnected ? Icons.cloud_done : Icons.cloud_off),
+            onPressed: _isConnected ? null : _connectToWebSocket,
           ),
         ],
       ),
       body: Column(
         children: [
           Expanded(
-            child: _chatHistory.isEmpty
-                ? Center(
-                    child: Text(
-                      'Start a conversation!',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 18,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: EdgeInsets.all(16),
-                    itemCount: _chatHistory.length + (_isLoading ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index >= _chatHistory.length) {
-                        return _TypingIndicator();
-                      }
-                      
-                      final message = _chatHistory[index];
-                      final isUser = message.containsKey('user');
-                      
-                      return Align(
-                        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Container(
-                          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
-                          margin: EdgeInsets.symmetric(vertical: 8),
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: isUser ? Colors.blue : Colors.grey[200],
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Text(
-                            message[isUser ? 'user' : 'ai']!,
-                            style: TextStyle(
-                              color: isUser ? Colors.white : Colors.black,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+            child: ListView.builder(
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                return _messages[index];
+              },
+            ),
           ),
           Padding(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(8.0),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
-                    controller: _textController,
-                    minLines: 1,
-                    maxLines: 4,
-                    style: TextStyle(fontSize: 16, color: Colors.white),
+                    controller: _messageController,
                     decoration: InputDecoration(
                       hintText: 'Type your message...',
-                      hintStyle: TextStyle(color: Colors.white54),
-                      filled: true,
-                      fillColor: Colors.black,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                      border: OutlineInputBorder(),
                     ),
-                    onSubmitted: (_) => _handleSubmit(),
+                    onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
-                SizedBox(width: 8),
                 IconButton(
-                  icon: Icon(_isListening ? Icons.mic_off : Icons.mic, color: Colors.blue),
-                  onPressed: _handleSpeechButtonPressed,
-                ),
-                IconButton(
-                  icon: Icon(Icons.send, color: Colors.blue),
-                  onPressed: _handleSubmit,
+                  icon: Icon(Icons.send),
+                  onPressed: _sendMessage,
                 ),
               ],
             ),
@@ -242,35 +169,41 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _channel.sink.close();
+    _messageController.dispose();
+    super.dispose();
+  }
 }
 
-class _TypingIndicator extends StatelessWidget {
+class ChatMessage extends StatelessWidget {
+  final String text;
+  final bool isUser;
+
+  const ChatMessage({
+    Key? key,
+    required this.text,
+    required this.isUser,
+  }) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
-        margin: EdgeInsets.symmetric(vertical: 8),
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(20),
+          color: isUser ? Colors.blue : Colors.grey[300],
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            SizedBox(width: 12),
-            Text(
-              'AI is typing...',
-              style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
-            ),
-          ],
+        child: Text(
+          text,
+          style: TextStyle(
+            color: isUser ? Colors.white : Colors.black,
+          ),
         ),
       ),
     );

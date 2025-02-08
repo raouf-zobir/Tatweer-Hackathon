@@ -164,48 +164,27 @@ async def generate_comprehensive_summary(calendar_status, issues, proposed_chang
     return summary
 
 async def handle_change_confirmation(agent, changes, issues):
-    """Handle change proposals with natural conversation"""
+    """Handle change proposals through websocket communication"""
     try:
         # Get current calendar status
         calendar_status = await direct_tool_call(CalendarTool, action="view")
         
         # Generate comprehensive summary
         summary = await generate_comprehensive_summary(calendar_status, issues, changes)
-        print(summary)
         
-        print("\nPlease let me know what you think about these changes.")
-        
-        while True:
-            user_input = input("\nYou: ").strip()
-            
-            # Let the agent interpret the response naturally
-            response = await handle_command(agent, 
-                f"Regarding the proposed changes, the user said: '{user_input}'\n"
-                f"Current changes: {changes}\n"
-                f"Based on this, determine if the user:\n"
-                f"1. Wants to proceed with changes\n"
-                f"2. Wants to cancel changes\n"
-                f"3. Needs modifications\n"
-                f"4. Needs more explanation\n"
-                f"5. Has other concerns\n"
-                f"Then take appropriate action."
-            )
-            
-            # Let the agent's response guide the next steps
-            if "PROCEED" in response:
-                return await apply_approved_changes(changes, summary)
-            elif "EXPLAIN" in response:
-                print(f"\n{response.split('EXPLAIN: ')[1]}")
-                print("\nWould you like to proceed with the changes now?")
-            elif "MODIFY" in response:
-                return await handle_modification_request(agent, user_input, changes, issues)
-            elif "CANCEL" in response:
-                return "Changes cancelled. Let me know if you'd like to explore other options."
-            else:
-                print(f"\n{response}")
+        # Return the summary as a response to be sent via websocket
+        return {
+            "type": "change_proposal",
+            "message": summary,
+            "changes": changes,
+            "issues": issues
+        }
 
     except Exception as e:
-        return f"Error during confirmation: {str(e)}"
+        return {
+            "type": "error",
+            "message": f"Error during confirmation: {str(e)}"
+        }
 
 async def get_team_contacts(team_name):
     """Fetch contacts for a specific team"""
@@ -383,24 +362,20 @@ async def edit_email_content(email_data):
 
 async def apply_approved_changes(changes, summary):
     try:
-        print("\nApplying changes...")
-        
         # Deduplicate and batch calendar updates
-        calendar_updates = {}  # Use dict to prevent duplicates
+        calendar_updates = {}  
         affected_teams = set()
         team_impacts = {}
         
         for change in changes:
             if change.get('action') == 'edit':
                 event_id = change.get('event_id')
-                # Only add each event once
                 if event_id not in calendar_updates:
                     calendar_updates[event_id] = {
                         'event_id': event_id,
                         'delay_hours': change.get('delay_hours')
                     }
                 
-                # Collect impact info once per event
                 if event_id not in team_impacts:
                     impact = await direct_tool_call(EventMonitor, 
                                                   action="analyze_impact",
@@ -418,13 +393,17 @@ async def apply_approved_changes(changes, summary):
                                           action="batch_edit",
                                           edits=list(calendar_updates.values()))
             
-            # Prepare notifications
-            # ...existing notification code...
-
-        return f"Successfully applied {len(calendar_updates)} updates."
+            return {
+                "type": "changes_applied",
+                "message": f"Successfully applied {len(calendar_updates)} updates.",
+                "details": result
+            }
 
     except Exception as e:
-        return f"Error applying changes: {str(e)}"
+        return {
+            "type": "error",
+            "message": f"Error applying changes: {str(e)}"
+        }
 
 async def handle_modification_request(agent, user_input, changes, issues):
     """Handle requests to modify the proposed changes"""
@@ -508,28 +487,5 @@ async def startup_sequence(agent):
     response_accumulator.add("\nI'm ready to help you manage operations. What would you like to do?")
     return response_accumulator.get_response()
 
-async def text_conversation_loop():
-    response_accumulator = ResponseAccumulator()
-    response_accumulator.add("Hello! I'm your operations assistant. Type 'quit' to exit.")
-    
-    # Run the startup sequence
-    startup_response = await startup_sequence(agent)
-    response_accumulator.add(startup_response)
-    
-    while True:
-        user_input = input("\nYou: ").strip()
-        
-        if user_input.lower() == 'quit':
-            response_accumulator.add("Goodbye!")
-            break
-            
-        if user_input:
-            response = await handle_command(agent, user_input)
-            response_accumulator.add(f"\nAssistant: {response}")
-    
-    return response_accumulator.get_response()
-
 if __name__ == "__main__":
-    # Run the text-based conversation loop and get the accumulated response
-    response = asyncio.run(text_conversation_loop())
-    print(response)  # Only print at the end if needed
+    print("This module should be imported by server.py")
