@@ -13,7 +13,7 @@ app = FastAPI()
 # Add CORS middleware configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origin
+    allow_origins=["*"],  # Allow all origins (change for production)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -22,11 +22,19 @@ app.add_middleware(
 # Get the current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Load encoder, scaler, and model
+# Load encoder and scaler
 encoder = joblib.load(os.path.join(current_dir, "encoder.pkl"))
 scaler = joblib.load(os.path.join(current_dir, "scaler.pkl"))
-model = xgb.Booster()
-model.load_model(os.path.join(current_dir, "xgb_Delivery Delay.h5"))
+
+# Load all models
+output_labels = ["Delivery Delay", "Accident Occurred", "Damaged Product", "Breakdown Occurred"]
+models = {}
+
+for label in output_labels:
+    model_path = os.path.join(current_dir, f"xgb_{label}.h5")
+    model = xgb.Booster()
+    model.load_model(model_path)
+    models[label] = model  # Store model in dictionary
 
 # Define request schema
 class InputData(BaseModel):
@@ -59,12 +67,16 @@ async def predict(data: InputData):
         X_numerical = scaler.transform(input_data[["Distance (km)", "Driver Experience (years)", "Loading Weight (kg)", "Year of Vehicle"]])
         X = np.hstack((X_categorical, X_numerical))
 
-        # Make predictions
+        # Convert to DMatrix format for XGBoost
         dmatrix = xgb.DMatrix(X)
-        prediction = model.predict(dmatrix)
-        result = {"Delivery_Delay": int(prediction[0] > 0.5)}
 
-        return result
+        # Predict for all labels
+        predictions = {}
+        for label, model in models.items():
+            pred = model.predict(dmatrix)
+            predictions[label.replace(" ", "_")] = int(pred[0] > 0.5)  # Convert to 0 or 1
+
+        return predictions
 
     except Exception as e:
         return {"error": str(e)}

@@ -1,10 +1,3 @@
-import sys
-import os
-
-# Add the virtual environment's site-packages to the Python path
-venv_path = os.path.join(os.path.dirname(__file__), 'venv', 'Lib', 'site-packages')
-sys.path.append(venv_path)
-
 import requests
 import json
 
