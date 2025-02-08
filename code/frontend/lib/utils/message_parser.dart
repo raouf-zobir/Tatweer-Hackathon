@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class MessageParser {
   static Map<String, List<Map<String, dynamic>>> parseStartupMessage(String message) {
     final Map<String, List<Map<String, dynamic>>> result = {
@@ -7,234 +9,112 @@ class MessageParser {
     };
 
     try {
-      // Extract all sections using flexible markers
-      final sections = _extractSections(message);
-      
-      if (sections['schedule'] != null) {
-        result['schedule'] = _parseSchedule(sections['schedule']!);
-      }
-      
-      if (sections['issues'] != null) {
-        result['issues'] = _parseIssues(sections['issues']!);
-        
-        // Parse actions within each issue block
-        final issueActions = _parseActionsFromIssues(sections['issues']!);
-        if (issueActions.isNotEmpty) {
-          result['actions'] = issueActions;
-        }
-      }
-      
-      if (sections['actions'] != null) {
-        // Merge with existing actions if any
-        result['actions']?.addAll(_parseGeneralActions(sections['actions']!));
+      // Parse schedule events
+      if (message.contains("Current Schedule:")) {
+        final scheduleSection = _extractSection(message, "Current Schedule:", "Checking for operational issues");
+        result['schedule'] = _parseScheduleEvents(scheduleSection);
       }
 
+      // Parse issues
+      if (message.contains("Found operational issues:")) {
+        final issuesSection = _extractSection(message, "Found operational issues:", "I'm ready");
+        final List<Map<String, dynamic>> issues = [];
+        
+        // Split into individual issue blocks
+        final issueBlocks = issuesSection.split(RegExp(r'\n(?=- \w+ issue:)'));
+        
+        for (var block in issueBlocks) {
+          if (block.trim().isEmpty) continue;
+          
+          final issue = _parseIssueBlock(block);
+          if (issue != null) {
+            issues.add(issue);
+          }
+        }
+        
+        result['issues'] = issues;
+      }
+
+      // Parse changes from JSON part
+      final changesMatch = RegExp(r"'changes':\s*(\[.*?\])", dotAll: true).firstMatch(message);
+      if (changesMatch != null) {
+        try {
+          final changesJson = changesMatch.group(1)!
+              .replaceAll("'", '"')
+              .replaceAllMapped(RegExp(r'(\w+):'), (match) => '"${match.group(1)}":');
+          
+          final List<dynamic> changes = json.decode(changesJson);
+          result['actions']?.addAll(
+            changes.map((c) {
+              final change = c as Map<String, dynamic>;
+              return {
+                ...change,
+                'type': 'change',
+                'description': 'Delay by ${change['delay_hours']} hours',
+              };
+            }).toList(),
+          );
+        } catch (e) {
+          print('Error parsing changes JSON: $e');
+        }
+      }
     } catch (e) {
-      print('Error parsing message: $e');
+      print('Error parsing startup message: $e');
     }
 
     return result;
   }
 
-  static Map<String, String> _extractSections(String message) {
-    final Map<String, String> sections = {};
-    final sectionMarkers = {
-      'schedule': [
-        'Current Schedule:',
-        'Upcoming events:',
-        'Schedule Overview:',
-        'Today\'s Schedule:',
-      ],
-      'issues': [
-        'Found operational issues:',
-        'Detected Issues:',
-        'Current Problems:',
-        'System Issues:',
-      ],
-      'actions': [
-        'Proposed actions:',
-        'Recommended Actions:',
-        'Action Items:',
-        'Required Actions:',
-      ],
-    };
-
-    for (var entry in sectionMarkers.entries) {
-      for (var marker in entry.value) {
-        final startIndex = message.indexOf(marker);
-        if (startIndex != -1) {
-          var endIndex = message.length;
-          
-          // Find the start of the next section
-          for (var otherMarkers in sectionMarkers.values) {
-            for (var otherMarker in otherMarkers) {
-              if (otherMarker != marker) {
-                final nextIndex = message.indexOf(otherMarker, startIndex + marker.length);
-                if (nextIndex != -1 && nextIndex < endIndex) {
-                  endIndex = nextIndex;
-                }
-              }
-            }
-          }
-          
-          sections[entry.key] = message.substring(startIndex, endIndex).trim();
-          break;
-        }
-      }
-    }
-
-    return sections;
-  }
-
-  static List<Map<String, dynamic>> _parseSchedule(String scheduleSection) {
+  static List<Map<String, dynamic>> _parseScheduleEvents(String scheduleSection) {
     final events = <Map<String, dynamic>>[];
-    final lines = scheduleSection.split('\n');
+    final eventPattern = RegExp(r'- (.*?):\s*(.*?)\s*\(ID:\s*(.*?)\)');
     
-    // Different date-time patterns to match
-    final patterns = [
-      RegExp(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}):\s*(.+?)(?:\s*\(ID:\s*(.*?)\))?$'),
-      RegExp(r'(\d{2}:\d{2})\s*[-:]\s*(.+?)(?:\s*\(ID:\s*(.*?)\))?$'),
-      RegExp(r'(\d{1,2}/\d{1,2}/\d{4}\s+\d{2}:\d{2})\s*[-:]\s*(.+?)(?:\s*\(ID:\s*(.*?)\))?$'),
-    ];
-
-    for (var line in lines) {
-      if (line.trim().startsWith('-') || line.contains(':')) {
-        line = line.replaceFirst('-', '').trim();
-        
-        for (var pattern in patterns) {
-          final match = pattern.firstMatch(line);
-          if (match != null) {
-            events.add({
-              'time': match.group(1)?.trim() ?? '',
-              'title': match.group(2)?.trim() ?? '',
-              'id': match.group(3)?.trim() ?? '',
-              'status': 'normal',
-            });
-            break;
-          }
-        }
-      }
-    }
-
-    return events;
-  }
-
-  static List<Map<String, dynamic>> _parseIssues(String issuesSection) {
-    final issues = <Map<String, dynamic>>[];
-    final issueBlocks = issuesSection.split(RegExp(r'\n(?=-|\*)\s*'));
-    
-    for (var block in issueBlocks) {
-      if (block.trim().isEmpty) continue;
-
-      final Map<String, dynamic> issue = {};
-      final lines = block.split('\n');
-      
-      // Parse issue header with flexible patterns
-      final headerPatterns = [
-        RegExp(r'(?:-)?\s*(.*?)\s+issue:\s*(.+)'),
-        RegExp(r'(?:-)?\s*Issue:\s*(.*?)\s+at\s+(.+)'),
-        RegExp(r'(?:-)?\s*(Problem|Error|Warning):\s*(.+)'),
-      ];
-
-      for (var pattern in headerPatterns) {
-        final match = pattern.firstMatch(lines[0]);
-        if (match != null) {
-          issue['type'] = match.group(1)?.trim() ?? 'Unknown';
-          issue['details'] = match.group(2)?.trim() ?? '';
-          break;
-        }
-      }
-
-      // Extract ID if present
-      final idMatch = RegExp(r'(?:ID:|Reference):\s*([A-Z0-9_-]+)').firstMatch(block);
-      issue['id'] = idMatch?.group(1) ?? '';
-
-      // Parse affected operations
-      final affectedOps = <String>[];
-      var inAffectedSection = false;
-      
-      for (var line in lines) {
-        if (line.contains('Affected Operations:')) {
-          inAffectedSection = true;
-          continue;
-        }
-        if (inAffectedSection && line.trim().startsWith('*')) {
-          affectedOps.add(line.trim().substring(1).trim());
-        }
-      }
-      
-      issue['affected_operations'] = affectedOps;
-      issues.add(issue);
-    }
-
-    return issues;
-  }
-
-  static List<Map<String, dynamic>> _parseActionsFromIssues(String issuesSection) {
-    final actions = <Map<String, dynamic>>[];
-    final issueBlocks = issuesSection.split(RegExp(r'\n(?=-)\s*'));
-    
-    for (var block in issueBlocks) {
-      var currentIssueId = '';
-      final idMatch = RegExp(r'(?:ID:|Reference):\s*([A-Z0-9_-]+)').firstMatch(block);
-      if (idMatch != null) {
-        currentIssueId = idMatch.group(1) ?? '';
-      }
-
-      // Find actions section within the issue block
-      final actionLines = block
-          .split('\n')
-          .where((line) => 
-              line.trim().startsWith('-') && 
-              !line.contains('issue:') &&
-              (line.contains('schedule') || 
-               line.contains('update') || 
-               line.contains('notify')))
-          .toList();
-
-      for (var line in actionLines) {
-        actions.add({
-          'description': line.substring(line.indexOf('-') + 1).trim(),
-          'related_issue': currentIssueId,
-          'priority': _determineActionPriority(line),
+    for (var line in scheduleSection.split('\n')) {
+      final match = eventPattern.firstMatch(line);
+      if (match != null) {
+        events.add({
+          'time': match.group(1)?.trim() ?? '',
+          'title': match.group(2)?.trim() ?? '',
+          'id': match.group(3)?.trim() ?? '',
         });
       }
     }
-
-    return actions;
-  }
-
-  static List<Map<String, dynamic>> _parseGeneralActions(String actionsSection) {
-    final actions = <Map<String, dynamic>>[];
-    final lines = actionsSection.split('\n');
     
-    for (var line in lines) {
-      if (line.trim().startsWith('-')) {
-        final action = line.substring(line.indexOf('-') + 1).trim();
-        if (action.isNotEmpty) {
-          actions.add({
-            'description': action,
-            'related_issue': '',
-            'priority': _determineActionPriority(action),
-          });
-        }
-      }
-    }
-
-    return actions;
+    return events;
   }
 
-  static String _determineActionPriority(String action) {
-    final lowercaseAction = action.toLowerCase();
-    if (lowercaseAction.contains('immediately') || 
-        lowercaseAction.contains('urgent') ||
-        lowercaseAction.contains('critical')) {
-      return 'high';
+  static Map<String, dynamic>? _parseIssueBlock(String block) {
+    if (block.trim().isEmpty) return null;
+
+    final typeMatch = RegExp(r'- (\w+) issue: (.+?)(?=\n|$)').firstMatch(block);
+    if (typeMatch == null) return null;
+
+    final idMatch = RegExp(r'Impact Analysis for ([^:]+):').firstMatch(block);
+    final statusMatch = RegExp(r'Primary Issue: (\w+) at').firstMatch(block);
+    
+    final affectedOps = <String>[];
+    final operationsRegex = RegExp(r'\* ([^\n]+)');
+    for (var match in operationsRegex.allMatches(block)) {
+      affectedOps.add(match.group(1)?.trim() ?? '');
     }
-    if (lowercaseAction.contains('soon') || 
-        lowercaseAction.contains('when possible')) {
-      return 'medium';
-    }
-    return 'normal';
+
+    final issueId = idMatch?.group(1)?.trim() ?? '';
+    return {
+      'id': issueId,
+      'type': typeMatch.group(1)?.toLowerCase() ?? '',
+      'details': typeMatch.group(2)?.trim() ?? '',
+      'status': statusMatch?.group(1)?.toLowerCase() ?? 'unknown',
+      'affected_operations': affectedOps,
+    };
+  }
+
+  static String _extractSection(String message, String startMarker, String endMarker) {
+    final startIndex = message.indexOf(startMarker);
+    if (startIndex == -1) return '';
+    
+    final endIndex = message.indexOf(endMarker, startIndex + startMarker.length);
+    return endIndex == -1 
+        ? message.substring(startIndex + startMarker.length).trim()
+        : message.substring(startIndex + startMarker.length, endIndex).trim();
   }
 }

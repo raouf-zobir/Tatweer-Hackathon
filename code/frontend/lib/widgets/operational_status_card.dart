@@ -21,6 +21,7 @@ class OperationalStatusCard extends StatefulWidget {
 class _OperationalStatusCardState extends State<OperationalStatusCard> {
   bool _isScheduleExpanded = true;
   bool _isIssuesExpanded = true;
+  bool _isActionsExpanded = true;  // Add this line
 
   String _formatDateTime(String dateTimeStr) {
     try {
@@ -78,7 +79,10 @@ class _OperationalStatusCardState extends State<OperationalStatusCard> {
               children: [
                 Text(
                   event['title'] ?? '',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87, // Explicitly set text color
+                  ),
                 ),
                 SizedBox(height: 4),
                 Text(
@@ -157,13 +161,6 @@ class _OperationalStatusCardState extends State<OperationalStatusCard> {
             ),
           ],
           if (actions.isNotEmpty) ...[
-            Divider(height: 16),
-            Text(
-              'Proposed Actions:',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
-            SizedBox(height: 8),
-            ...actions.map((action) => _buildActionItem(action)),
           ],
         ],
       ),
@@ -181,23 +178,7 @@ class _OperationalStatusCardState extends State<OperationalStatusCard> {
     );
   }
 
-  Widget _buildActionItem(Map<String, dynamic> action) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 8, top: 4),
-      child: Row(
-        children: [
-          Icon(Icons.arrow_right, size: 16, color: Colors.orange),
-          SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              action['description'] ?? '',
-              style: TextStyle(fontSize: 13),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildExpandableSection({
     required String title,
