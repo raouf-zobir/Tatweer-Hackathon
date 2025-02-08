@@ -15,22 +15,12 @@ class _PredictDemandPageState extends State<PredictDemandPage> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   int? _predictedDemand;
-
-  // Controllers
+  DateTime? _selectedDate;
   final _temperatureController = TextEditingController();
-  final List<String> _daysOfWeek = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday'
-  ];
-  String? _selectedDay;
+  final _dateController = TextEditingController();
 
   Future<void> _submitPrediction() async {
-    if (_formKey.currentState!.validate()) {
+    if (_formKey.currentState!.validate() && _selectedDate != null) {
       setState(() => _isLoading = true);
       
       try {
@@ -38,27 +28,55 @@ class _PredictDemandPageState extends State<PredictDemandPage> {
           Uri.parse('http://localhost:8000/predict_demand/'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'day_of_week': _selectedDay,
+            'date': _selectedDate!.toIso8601String(),
             'temperature': double.parse(_temperatureController.text),
           }),
         );
 
         if (response.statusCode == 200) {
-          final result = jsonDecode(response.body);
-          setState(() {
-            _predictedDemand = result['predicted_demand'];
-            _isLoading = false;
-          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Prediction completed successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
         } else {
-          throw Exception('Failed to get prediction');
+          throw Exception('Failed to get prediction: ${response.body}');
         }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
         setState(() => _isLoading = false);
       }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please fill all fields correctly'),
+          backgroundColor: Colors.orange,
+        ),
+      );
     }
+  }
+
+  void _formatDateInput(String value) {
+    String numbers = value.replaceAll(RegExp(r'[^0-9]'), '');
+    String formattedDate = '';
+
+    for (int i = 0; i < numbers.length && i < 8; i++) {
+      if (i == 2 || i == 4) {
+        formattedDate += '/';
+      }
+      formattedDate += numbers[i];
+    }
+
+    _dateController.value = TextEditingValue(
+      text: formattedDate,
+      selection: TextSelection.collapsed(offset: formattedDate.length),
+    );
   }
 
   Widget _buildResultPanel() {
@@ -138,25 +156,59 @@ class _PredictDemandPageState extends State<PredictDemandPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            DropdownButtonFormField<String>(
+            // Single date input field
+            TextFormField(
+              controller: _dateController,
               decoration: InputDecoration(
-                labelText: 'Day of Week',
+                labelText: 'Date (DD/MM/YYYY)',
                 border: OutlineInputBorder(),
                 filled: true,
                 fillColor: Colors.grey[900],
                 prefixIcon: Icon(Icons.calendar_today),
+                helperText: 'Format: DD/MM/YYYY (e.g., 25/12/2023)',
+                errorMaxLines: 2,
               ),
-              value: _selectedDay,
-              items: _daysOfWeek.map((String day) {
-                return DropdownMenuItem<String>(
-                  value: day,
-                  child: Text(day),
-                );
-              }).toList(),
-              onChanged: (value) => setState(() => _selectedDay = value),
-              validator: (val) => val == null ? 'Please select a day' : null,
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                LengthLimitingTextInputFormatter(10),
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9/]')),
+              ],
+              onChanged: _formatDateInput,
+              validator: (val) {
+                if (val == null || val.isEmpty) return 'Required';
+                if (val.length < 10) return 'Please complete the date (DD/MM/YYYY)';
+                if (!RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(val)) {
+                  return 'Invalid format. Use: DD/MM/YYYY';
+                }
+
+                final parts = val.split('/');
+                final day = int.tryParse(parts[0]);
+                final month = int.tryParse(parts[1]);
+                final year = int.tryParse(parts[2]);
+
+                if (day == null || month == null || year == null) {
+                  return 'Invalid date numbers';
+                }
+                if (day < 1 || day > 31) return 'Day must be between 1-31';
+                if (month < 1 || month > 12) return 'Month must be between 1-12';
+                if (year < 2020 || year > 2025) return 'Year must be between 2020-2025';
+
+                try {
+                  _selectedDate = DateTime(year, month, day);
+                  // Check if it's a valid date (e.g., not 31/04/2023)
+                  if (_selectedDate!.day != day || 
+                      _selectedDate!.month != month || 
+                      _selectedDate!.year != year) {
+                    return 'Invalid date for selected month';
+                  }
+                } catch (e) {
+                  return 'Invalid date';
+                }
+                return null;
+              },
             ),
             SizedBox(height: defaultPadding),
+            // Temperature input remains unchanged
             TextFormField(
               controller: _temperatureController,
               decoration: InputDecoration(
@@ -172,13 +224,9 @@ class _PredictDemandPageState extends State<PredictDemandPage> {
                 FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*$')),
               ],
               validator: (val) {
-                if (val == null || val.isEmpty) {
-                  return 'Required';
-                }
+                if (val == null || val.isEmpty) return 'Required';
                 final temp = double.tryParse(val);
-                if (temp == null) {
-                  return 'Invalid temperature';
-                }
+                if (temp == null) return 'Invalid temperature';
                 if (temp < -50 || temp > 60) {
                   return 'Temperature must be between -50°C and 60°C';
                 }
@@ -186,9 +234,7 @@ class _PredictDemandPageState extends State<PredictDemandPage> {
               },
             ),
             SizedBox(height: defaultPadding * 2),
-            Center(
-              child: _buildSubmitButton(),
-            ),
+            Center(child: _buildSubmitButton()),
           ],
         ),
       ),
@@ -230,7 +276,7 @@ class _PredictDemandPageState extends State<PredictDemandPage> {
           children: [
             PageTitle(
               title: "Demand Prediction",
-              subtitle: "Predict delivery demands based on day and temperature",
+              subtitle: "Predict delivery demands based on temperature",
               icon: Icons.trending_up,
               actions: [
                 IconButton(
@@ -241,7 +287,7 @@ class _PredictDemandPageState extends State<PredictDemandPage> {
                       builder: (context) => AlertDialog(
                         title: Text("Help"),
                         content: Text(
-                            "Enter the day of the week and temperature to predict the number of expected deliveries."),
+                            "Enter the temperature to predict the number of expected deliveries."),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
@@ -288,6 +334,7 @@ class _PredictDemandPageState extends State<PredictDemandPage> {
 
   @override
   void dispose() {
+    _dateController.dispose();
     _temperatureController.dispose();
     super.dispose();
   }

@@ -6,6 +6,7 @@ import xgboost as xgb
 import pandas as pd
 import os
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
 
 # Initialize FastAPI
 app = FastAPI()
@@ -77,6 +78,23 @@ async def predict_commands(data: dict):
         import random
         predicted_commands = random.randint(10, 100)
         return {"predicted_commands": predicted_commands}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/predict_demand/")
+async def predict_demand(data: dict):
+    try:
+        temperature = float(data['temperature'])
+        
+        # Simple calculation based only on temperature
+        base_demand = 50  # Base demand
+        temp_factor = temperature * 0.5  # Temperature affects demand
+        
+        predicted_demand = int(base_demand + temp_factor)
+        
+        return {
+            "predicted_demand": predicted_demand
+        }
     except Exception as e:
         return {"error": str(e)}
 

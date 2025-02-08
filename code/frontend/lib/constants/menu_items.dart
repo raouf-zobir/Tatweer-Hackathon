@@ -30,11 +30,6 @@ const List<MenuItem> sideMenuItems = [
     page: DashboardPage.predictDemand,
   ),
   MenuItem(
-    title: "Commands Prediction",
-    icon: Icons.shopping_basket,
-    page: DashboardPage.predictCommands,
-  ),
-  MenuItem(
     title: "Products",
     icon: Icons.shopping_cart,
     page: DashboardPage.products,
@@ -53,11 +48,6 @@ const List<MenuItem> sideMenuItems = [
     title: "Settings",
     icon: Icons.settings,
     page: DashboardPage.settings,
-  ),
-  MenuItem(
-    title: "Gallery",
-    icon: Icons.photo_library,
-    page: DashboardPage.gallery,
   ),
   MenuItem(
     title: "Logout",

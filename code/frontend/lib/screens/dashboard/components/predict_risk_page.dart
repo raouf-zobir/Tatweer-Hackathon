@@ -29,7 +29,6 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
   String? _trafficLevel;
   String? _vehicleType;
   String? _goodsType;
-  String? _driverExperience;
 
   // Updated options for dropdowns
   final _weatherConditions = [
@@ -53,12 +52,6 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
     'Large Truck',
     'Medium Truck',
     'Small Van'
-  ];
-  
-  final _driverExperienceLevels = [
-    'Novice',
-    'Intermediate',
-    'Expert'
   ];
   
   final _goodsTypes = [
@@ -96,7 +89,7 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
             'Distance_km': double.parse(_distanceController.text),
             'Traffic_Level': _trafficLevel,
             'Vehicle_Type': _vehicleType,
-            'Driver_Experience_years': _getExperienceYears(_driverExperience ?? 'Novice'),
+            'Driver_Experience_years': int.parse(_driverExperienceController.text),
             'Goods_Type': _goodsType,
             'Loading_Weight_kg': double.parse(_loadingWeightController.text),
             'Year_of_Vehicle': int.parse(_vehicleYearController.text)
@@ -473,11 +466,10 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
         _buildFormSection(
           "Personnel & Cargo",
           [
-            _buildDropdownField(
-              'Driver Experience',
-              _driverExperienceLevels,
-              _driverExperience,
-              (val) => setState(() => _driverExperience = val),
+            _buildInputField(
+              'Driver Experience (years)',
+              _driverExperienceController,
+              TextInputType.number,
               icon: Icons.person,
             ),
             SizedBox(height: defaultPadding),

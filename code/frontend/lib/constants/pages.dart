@@ -4,8 +4,6 @@ enum DashboardPage {
   dashboard,
   predict,
   predictDemand,
-  predictCommands,
-  gallery,
   products,
   inbox,
   orderLists,
