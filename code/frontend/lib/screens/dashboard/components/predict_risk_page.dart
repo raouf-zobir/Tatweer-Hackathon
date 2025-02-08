@@ -13,9 +13,10 @@ class PredictRiskPage extends StatefulWidget {
   @override
   _PredictRiskPageState createState() => _PredictRiskPageState();
 }
+
 class _PredictRiskPageState extends State<PredictRiskPage> {
   final _formKey = GlobalKey<FormState>();
-  bool? _predictionResult;
+  Map<String, bool>? _predictionResults; // Updated to handle multiple results
   bool _isLoading = false;
 
   // Input field controllers
@@ -40,27 +41,16 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
     'Foggy',
     'Cloudy'
   ];
-  
-  final _trafficLevels = [
-    'Medium',
-    'Low',
-    'Severe',
-    'High'
-  ];
-  
+
+  final _trafficLevels = ['Medium', 'Low', 'Severe', 'High'];
+
   final _vehicleTypes = [
     'Refrigerated Truck',
     'Large Truck',
     'Medium Truck',
     'Small Van'
   ];
-  
-  final _driverExperienceLevels = [
-    'Novice',
-    'Intermediate',
-    'Expert'
-  ];
-  
+
   final _goodsTypes = [
     'Fragile',
     'Perishable',
@@ -70,33 +60,25 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
 
   // Helper method to convert experience level to years
   int _getExperienceYears(String level) {
-    switch (level) {
-      case 'Novice':
-        return 1;
-      case 'Intermediate':
-        return 3;
-      case 'Expert':
-        return 5;
-      default:
-        return 0;
-    }
+    return int.parse(level);
   }
 
   // Update the submit method to handle experience levels
   Future<void> _submitPrediction() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
-      
+
       try {
         final response = await http.post(
-          Uri.parse('http://localhost:8000/predict/'),
+          Uri.parse('http://127.0.0.1:8000/predict/'), // Updated URL
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'Weather_Condition': _weatherCondition,
             'Distance_km': double.parse(_distanceController.text),
             'Traffic_Level': _trafficLevel,
             'Vehicle_Type': _vehicleType,
-            'Driver_Experience_years': _getExperienceYears(_driverExperience ?? 'Novice'),
+            'Driver_Experience_years': int.parse(
+                _driverExperienceController.text), // Updated to use controller
             'Goods_Type': _goodsType,
             'Loading_Weight_kg': double.parse(_loadingWeightController.text),
             'Year_of_Vehicle': int.parse(_vehicleYearController.text)
@@ -106,7 +88,12 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
         if (response.statusCode == 200) {
           final result = jsonDecode(response.body);
           setState(() {
-            _predictionResult = result['Delivery_Delay'] == 1;
+            _predictionResults = {
+              'Delivery_Delay': result['Delivery_Delay'] == 1,
+              'Accident_Occurred': result['Accident_Occurred'] == 1,
+              'Damaged_Product': result['Damaged_Product'] == 1,
+              'Breakdown_Occurred': result['Breakdown_Occurred'] == 1,
+            };
             _isLoading = false;
           });
         } else {
@@ -141,7 +128,8 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
                       context: context,
                       builder: (context) => AlertDialog(
                         title: Text("Help"),
-                        content: Text("Fill in all the fields to predict delivery risks."),
+                        content: Text(
+                            "Fill in all the fields to predict delivery risks."),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
@@ -158,27 +146,27 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
             Container(
               width: double.infinity,
               child: Responsive.isMobile(context)
-                ? Column(
-                    children: [
-                      _buildMainForm(),
-                      SizedBox(height: defaultPadding),
-                      _buildResultPanel(),
-                    ],
-                  )
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 5,
-                        child: _buildMainForm(),
-                      ),
-                      SizedBox(width: defaultPadding),
-                      Expanded(
-                        flex: 2,
-                        child: _buildResultPanel(),
-                      ),
-                    ],
-                  ),
+                  ? Column(
+                      children: [
+                        _buildMainForm(),
+                        SizedBox(height: defaultPadding),
+                        _buildResultPanel(),
+                      ],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 5,
+                          child: _buildMainForm(),
+                        ),
+                        SizedBox(width: defaultPadding),
+                        Expanded(
+                          flex: 2,
+                          child: _buildResultPanel(),
+                        ),
+                      ],
+                    ),
             ),
           ],
         ),
@@ -189,7 +177,8 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
   Widget _buildInfoHeader() {
     return PageHeader(
       title: "Delivery Risk Assessment",
-      subtitle: "Fill in all fields to get an accurate prediction of delivery risks",
+      subtitle:
+          "Fill in all fields to get an accurate prediction of delivery risks",
       icon: Icons.analytics,
     );
   }
@@ -214,7 +203,7 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
           SizedBox(height: defaultPadding),
           if (_isLoading)
             Center(child: CircularProgressIndicator())
-          else if (_predictionResult != null)
+          else if (_predictionResults != null)
             _buildPredictionResult()
           else
             Container(
@@ -255,9 +244,9 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
               Text(
                 "Delivery Risk Assessment",
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               Text(
                 "Fill in the details below to predict delivery risks",
@@ -369,7 +358,7 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
           fillColor: Colors.grey[900],
           prefixIcon: icon != null ? Icon(icon) : null,
           // Add helper text to show valid range
-          helperText: keyboardType == TextInputType.number 
+          helperText: keyboardType == TextInputType.number
               ? 'Enter numbers only'
               : null,
         ),
@@ -395,7 +384,8 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
             if (label == 'Distance (km)' && (numVal <= 0 || numVal > 10000)) {
               return 'Enter valid distance (0-10000 km)';
             }
-            if (label == 'Loading Weight (kg)' && (numVal <= 0 || numVal > 50000)) {
+            if (label == 'Loading Weight (kg)' &&
+                (numVal <= 0 || numVal > 50000)) {
               return 'Enter valid weight (0-50000 kg)';
             }
             if (label == 'Vehicle Year') {
@@ -416,28 +406,30 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
       margin: EdgeInsets.only(top: defaultPadding),
       padding: EdgeInsets.all(defaultPadding),
       decoration: BoxDecoration(
-        color: _predictionResult! ? Colors.red.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+        color: Colors.grey.withOpacity(0.1),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: _predictionResult! ? Colors.red.withOpacity(0.5) : Colors.green.withOpacity(0.5),
-        ),
+        border: Border.all(color: Colors.grey.withOpacity(0.2)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            _predictionResult! ? Icons.warning : Icons.check_circle,
-            color: _predictionResult! ? Colors.red : Colors.green,
-          ),
-          SizedBox(width: defaultPadding),
-          Text(
-            _predictionResult! ? "High Risk of Delay" : "Low Risk of Delay",
-            style: TextStyle(
-              color: _predictionResult! ? Colors.red : Colors.green,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: _predictionResults!.entries.map((entry) {
+          return Row(
+            children: [
+              Icon(
+                entry.value ? Icons.warning : Icons.check_circle,
+                color: entry.value ? Colors.red : Colors.green,
+              ),
+              SizedBox(width: defaultPadding),
+              Text(
+                entry.key.replaceAll('_', ' '),
+                style: TextStyle(
+                  color: entry.value ? Colors.red : Colors.green,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
@@ -514,11 +506,10 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
         _buildFormSection(
           "Personnel & Cargo",
           [
-            _buildDropdownField(
-              'Driver Experience',
-              _driverExperienceLevels,
-              _driverExperience,
-              (val) => setState(() => _driverExperience = val),
+            _buildInputField(
+              'Driver Experience (years)', // Updated to input field
+              _driverExperienceController,
+              TextInputType.number,
               icon: Icons.person,
             ),
             SizedBox(height: defaultPadding),
@@ -582,7 +573,7 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
   @override
   void dispose() {
     _distanceController.dispose();
-    _driverExperienceController.dispose();
+    _driverExperienceController.dispose(); // Dispose the controller
     _loadingWeightController.dispose();
     _vehicleYearController.dispose();
     super.dispose();
