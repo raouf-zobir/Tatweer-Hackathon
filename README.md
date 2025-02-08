@@ -44,6 +44,8 @@ Operational Update and Issue Management Example:
 
 ![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot%202025-02-08%20225431.png)
 
+![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot%202025-02-08%20225520.png)
+
 ### Real-Time Monitoring Capabilities
 - Multi-facility monitoring (Ports, Factories, Distribution Centers)
 - Real-time tracking of:
@@ -65,6 +67,7 @@ Operational Update and Issue Management Example:
 - Automated email notifications to stakeholders
 - Impact assessment across the supply chain
 - Coordinated response planning
+- 
 ![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot_36.png)
 
 
