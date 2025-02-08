@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../constants/style.dart';
+import '../utils/responsive.dart';
+import '../controllers/menu_app_controller.dart';
 
 class PageTitle extends StatelessWidget {
   final String title;
@@ -32,6 +35,13 @@ class PageTitle extends StatelessWidget {
       ),
       child: Row(
         children: [
+          if (!Responsive.isDesktop(context))
+            IconButton(
+              icon: Icon(Icons.menu, color: Colors.white),
+              onPressed: () {
+                context.read<MenuAppController>().controlMenu();
+              },
+            ),
           Container(
             padding: EdgeInsets.all(defaultPadding * 0.5),
             decoration: BoxDecoration(
