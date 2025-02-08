@@ -3,12 +3,13 @@ import '../constants/style.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ThemeProvider extends ChangeNotifier {
-  ThemeMode _themeMode = ThemeMode.dark;
-  
-  ThemeMode get themeMode => _themeMode;
+  bool _isDarkMode = true;
 
-  void setThemeMode(ThemeMode mode) {
-    _themeMode = mode;
+  bool get isDarkMode => _isDarkMode;
+  ThemeMode get themeMode => _isDarkMode ? ThemeMode.dark : ThemeMode.light;
+
+  void toggleTheme() {
+    _isDarkMode = !_isDarkMode;
     notifyListeners();
   }
 

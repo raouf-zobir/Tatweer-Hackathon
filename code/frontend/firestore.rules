@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow calendar operations
+    match /calendar/{monthId}/{document=**} {
+      allow read, write: if true;  // For testing - update with proper auth later
+    }
+    // ...existing rules...
+  }
+}

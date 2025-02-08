@@ -15,15 +15,26 @@ class SideMenu extends StatelessWidget {
             child: Image.asset("assets/images/logo.png"),
           ),
           _DrawerListTile(
-            title: "Dashboard", // Changed from "1 Dashboard" to "Dashboard"
+            title: "Dashboard",
             icon: Icons.dashboard_outlined,
             page: DashboardPage.dashboard,
           ),
           _DrawerListTile(
-            title: "Assitant",
+            title: "Assistant",
             icon: Icons.speaker,
             page: DashboardPage.aiAssistant,
           ),
+          _DrawerListTile(
+            title: "Predict Risk",
+            icon: Icons.assessment_outlined,
+            page: DashboardPage.predict,
+          ),
+          _DrawerListTile(
+            title: "Products",
+            icon: Icons.shopping_bag_outlined,
+            page: DashboardPage.products,
+          ),
+
           _DrawerListTile(
             title: "Order Lists",
             icon: Icons.list_alt_outlined,

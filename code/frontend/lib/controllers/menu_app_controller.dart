@@ -9,20 +9,15 @@ class MenuAppController extends ChangeNotifier {
   DashboardPage get currentPage => _currentPage;
 
   void controlMenu() {
-    if (!_scaffoldKey.currentState!.isDrawerOpen) {
-      _scaffoldKey.currentState!.openDrawer();
+    if (_scaffoldKey.currentState != null) {
+      if (!_scaffoldKey.currentState!.isDrawerOpen) {
+        _scaffoldKey.currentState!.openDrawer();
+      }
     }
   }
 
   void changePage(DashboardPage page) {
     _currentPage = page;
     notifyListeners();
-    switch (page) {
-      case DashboardPage.aiAssistant:
-        Navigator.pushNamed(scaffoldKey.currentContext!, '/ai-assistant');
-        break;
-      default:
-        break;
-    }
   }
 }
