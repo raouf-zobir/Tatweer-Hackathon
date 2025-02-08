@@ -8,6 +8,7 @@ import 'terms_page.dart';
 import 'settings_page.dart';
 import 'contact_page.dart';
 import 'calendar_page.dart';
+import 'ai_assistant_page.dart';
 
 class PageContainer extends StatelessWidget {
   final DashboardPage currentPage;
@@ -42,6 +43,8 @@ class PageContainer extends StatelessWidget {
         return const SettingsPage();
       case DashboardPage.logout:
         return const LogoutPage();
+      case DashboardPage.aiAssistant:
+        return  AIAssistantPage();
       default:
         return ResponsivePage(title: page.toString().split('.').last);
     }

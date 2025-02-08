@@ -9,6 +9,7 @@ import 'package:admin/screens/auth/login_page.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/theme_provider.dart';
+import 'screens/pages/ai_assistant_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +53,9 @@ class MyApp extends StatelessWidget {
             theme: themeProvider.getLightTheme(context),
             darkTheme: themeProvider.getDarkTheme(context),
             home: const LoginPage(),
+            routes: {
+              '/ai-assistant': (context) => AIAssistantPage(),
+            },
           );
         },
       ),
