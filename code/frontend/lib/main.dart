@@ -32,9 +32,6 @@ class MyApp extends StatelessWidget {
             theme: themeProvider.getLightTheme(context),
             darkTheme: themeProvider.getDarkTheme(context),
             home: const LoginPage(),
-            routes: {
-              '/ai-assistant': (context) => AIAssistantPage(),
-            },
           );
         },
       ),

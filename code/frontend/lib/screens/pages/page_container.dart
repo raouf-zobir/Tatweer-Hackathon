@@ -8,6 +8,7 @@ import 'terms_page.dart';
 import 'settings_page.dart';
 import 'contact_page.dart';
 import 'calendar_page.dart';
+import 'ai_assistant_page.dart';
 
 class PageContainer extends StatelessWidget {
   final DashboardPage currentPage;
@@ -28,8 +29,8 @@ class PageContainer extends StatelessWidget {
         return DashboardScreen();
       case DashboardPage.products:
         return ResponsivePage(title: 'Products');
-      case DashboardPage.inbox:
-        return ResponsivePage(title: 'Inbox');
+      case DashboardPage.aiAssistant:
+        return AIAssistantPage();
       case DashboardPage.orderLists:
         return ResponsivePage(title: 'Order Lists');
       case DashboardPage.productStock:
