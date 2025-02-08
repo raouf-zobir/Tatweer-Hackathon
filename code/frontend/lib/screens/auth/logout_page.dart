@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/style.dart';
 import '../../providers/auth_provider.dart';
-import 'login_page.dart';  // Add this import
+import '../main/main_screen.dart'; // Import the main screen
+import 'login_page.dart';
 
 class LogoutPage extends StatelessWidget {
   const LogoutPage({Key? key}) : super(key: key);
@@ -49,13 +50,13 @@ class LogoutPage extends StatelessWidget {
                     onPressed: () {
                       // First, call logout on the auth provider
                       context.read<AuthProvider>().logout();
-                      
+
                       // Then, navigate to login page and remove all previous routes
                       Navigator.of(context).pushAndRemoveUntil(
                         MaterialPageRoute(
                           builder: (context) => const LoginPage(),
                         ),
-                        (route) => false,  // This removes all previous routes
+                        (route) => false, // This removes all previous routes
                       );
                     },
                     child: const Text("Logout"),
@@ -68,7 +69,15 @@ class LogoutPage extends StatelessWidget {
                         vertical: defaultPadding,
                       ),
                     ),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () {
+                      // Navigate back to the main screen (dashboard)
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (context) => MainScreen(),
+                        ),
+                        (route) => false, // This removes all previous routes
+                      );
+                    },
                     child: const Text("Cancel"),
                   ),
                 ],
