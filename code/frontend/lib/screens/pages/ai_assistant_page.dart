@@ -30,7 +30,10 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
   }
 
   void _initializeSpeech() async {
-    bool available = await _speech.initialize();
+    bool available = await _speech.initialize(
+      onStatus: (status) => print('Speech status: $status'),
+      onError: (error) => print('Speech error: $error'),
+    );
     if (!available) {
       _showMessage('Speech recognition not available');
     }
@@ -46,7 +49,10 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
 
   void _startListening() async {
     if (!_isListening) {
-      bool available = await _speech.initialize();
+      bool available = await _speech.initialize(
+        onStatus: (status) => print('Speech status: $status'),
+        onError: (error) => print('Speech error: $error'),
+      );
       if (available) {
         setState(() => _isListening = true);
         await _speech.listen(
@@ -57,7 +63,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
           },
           listenFor: Duration(seconds: 15), // Limit listening time
           pauseFor: Duration(seconds: 1), // Pause time before auto-stop
-          onSoundLevelChange: (level) {}, // Can be used for UI animations
+          onSoundLevelChange: (level) => print('Sound level: $level'), // Can be used for UI animations
         );
       } else {
         _showMessage('Speech recognition not available');
