@@ -13,7 +13,30 @@ An intelligent supply chain management solution powered by LLaMA-70B that provid
 - Smart scheduling and calendar management
 - Automated stakeholder notification system
 - Human-in-the-loop confirmation for critical decisions
+- ## Example Operation
+```
+Operational Update and Issue Management Example:
+
+1. Real-time Schedule Monitoring:
+   - Quality Control Checks
+   - Production Line Operations
+   - Delivery Schedules
+   - Container Shipments
+
+2. Issue Detection & Analysis:
+   - Port of Jeddah: Logistics Delay
+   - Dammam Highway: Checkpoint Delay
+   - Gigafactory ME: Production Delay
+   - Food Processing: At-risk Operations
+
+3. Autonomous Response:
+   - Schedule Adjustments
+   - Production Timeline Updates
+   - Stakeholder Notifications
+   - Resource Reallocation
+```
 ![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot_35.png)
+
 
 
 ![Screenshot 1]((https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot%202025-02-08%20225520.png))
@@ -45,28 +68,7 @@ An intelligent supply chain management solution powered by LLaMA-70B that provid
 ![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot_36.png)
 
 
-## Example Operation
-```
-Operational Update and Issue Management Example:
 
-1. Real-time Schedule Monitoring:
-   - Quality Control Checks
-   - Production Line Operations
-   - Delivery Schedules
-   - Container Shipments
-
-2. Issue Detection & Analysis:
-   - Port of Jeddah: Logistics Delay
-   - Dammam Highway: Checkpoint Delay
-   - Gigafactory ME: Production Delay
-   - Food Processing: At-risk Operations
-
-3. Autonomous Response:
-   - Schedule Adjustments
-   - Production Timeline Updates
-   - Stakeholder Notifications
-   - Resource Reallocation
-```
 ![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot_37.png)
 
 ### Travel ETA Detection
