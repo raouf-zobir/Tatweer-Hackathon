@@ -5,15 +5,15 @@ import json
 url = "http://localhost:5000/forecast"
 
 # Data to send (dates and temperatures)
-# data = {
-#     "dates": ["01.01.2024", "02.01.2024", "03.01.2024"],
-#     "temperatures": [20, 12, 15]
-# }
-
 data = {
-    "dates": ["01.01.2024"],
-    "temperatures": [20]
+    "dates": ["01.01.2024", "02.01.2024", "03.01.2024"],
+    "temperatures": [20, 12, 15]
 }
+
+# data = {
+#     "dates": ["01.01.2024"],
+#     "temperatures": [20]
+# }
 
 # Send a POST request
 response = requests.post(url, json=data)
