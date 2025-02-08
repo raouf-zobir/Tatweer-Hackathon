@@ -2,6 +2,7 @@
 
 ## Overview
 An intelligent supply chain management solution powered by LLaMA-70B that provides real-time monitoring and adaptive response to logistics challenges. The system actively monitors, detects, analyzes, and autonomously responds to supply chain disruptions while continuously learning from historical data.
+
 ![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot_33.png)
 ## Key Features
 
@@ -34,6 +35,7 @@ An intelligent supply chain management solution powered by LLaMA-70B that provid
 - Automated email notifications to stakeholders
 - Impact assessment across the supply chain
 - Coordinated response planning
+![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot_36.png)
 
 ## Example Operation
 ```
@@ -57,6 +59,7 @@ Operational Update and Issue Management Example:
    - Stakeholder Notifications
    - Resource Reallocation
 ```
+![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/Screenshot_37.png)
 
 ### Travel ETA Detection
 - Planned and current ETAs.
