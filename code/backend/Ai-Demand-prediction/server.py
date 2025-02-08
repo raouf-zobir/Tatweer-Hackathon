@@ -7,7 +7,7 @@ import os
 # -------------------------------
 # Load the pre-trained Prophet model
 # -------------------------------
-MODEL_FILENAME = 'C:\\Users\\Raouf\\Documents\\GitHub\\Tatweer_Hackathon\\testing\\prophet_model_log.pkl'
+MODEL_FILENAME = 'C:\\Users\\Raouf\\Documents\GitHub\\Tatweer_Hackathon\\code\\backend\\Ai-Demand-prediction\\prophet_model_log.pkl'
 
 # Check if the model file exists
 if not os.path.exists(MODEL_FILENAME):
