@@ -126,6 +126,17 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  Widget _buildLogo() {
+    return Container(
+      height: 150,
+      padding: EdgeInsets.all(defaultPadding),
+      child: Image.asset(
+        'assets/images/i2.png', // Changed from previous logo to i2.png
+        fit: BoxFit.contain,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -141,10 +152,7 @@ class _LoginPageState extends State<LoginPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.asset(
-                "assets/images/logo.png",
-                height: 100,
-              ),
+              _buildLogo(),
               const SizedBox(height: defaultPadding),
               Text(
                 "Welcome Back",
