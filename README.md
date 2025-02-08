@@ -99,8 +99,36 @@ The system uses OpenRouteService API to:
   - **Planned Delay**: Deviation from original schedule
   - **Real-Time Delay**: Updated ETA based on current position
 - Automatically trigger AI agent responses when delays are detected
-## System Explanation: How It Works  
-Below is a brief explanation of how our system functions
+
+
+# Predictive Logistics AI
+
+This repository contains a project designed to predict key outcomes in transportation and logistics using machine learning. The model leverages features such as weather conditions, traffic levels, vehicle specifications, and driver experience to predict events like delivery delays, accidents, damaged goods, and vehicle breakdowns.
+
+## Dataset Description
+
+### Input Features:
+1. **Weather Condition**: Weather during transit (e.g., sunny, rainy, foggy, snowy).
+2. **Distance (km)**: Distance of the delivery route.
+3. **Traffic Level**: Traffic conditions on the route (e.g., low, medium, high).
+4. **Vehicle Type**: Type of vehicle used for the delivery (e.g., truck, van, car).
+5. **Driver Experience (years)**: Years of driving experience of the driver.
+6. **Goods Type**: Category of goods being transported (e.g., fragile, perishable).
+7. **Loading Weight (kg)**: Weight of the goods in kilograms.
+8. **Year of Vehicle**: Manufacturing year of the vehicle.
+
+### Predicted Outcomes:
+1. **Delivery Delay**: Whether the delivery is delayed.
+2. **Accident Occurred**: Whether an accident occurred during the delivery.
+3. **Damaged Product**: Whether the goods were damaged in transit.
+4. **Breakdown Occurred**: Whether the vehicle broke down during the trip.
+
+## Features of the Repository
+- **Exploratory Data Analysis (EDA)**: Scripts to explore and visualize the dataset.
+- **Predictive Models**: Machine learning models for classification and regression tasks.
+- **Evaluation Metrics**: Metrics to assess the performance of the models (e.g., accuracy, precision, recall, RMSE).
+- **Documentation**: Detailed notes on how to preprocess the data, train models, and interpret predictions.
+
 ![Screenshot 1](https://github.com/raouf-zobir/Tatweer-Hackathon/blob/master/image2.png)
 
 
