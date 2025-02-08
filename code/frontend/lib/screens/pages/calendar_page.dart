@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../constants/style.dart';
-import '../components/dashboard_header.dart';
+import '../../components/page_title.dart';
 
 class ScheduleEvent {
   final String title;
@@ -444,7 +444,11 @@ class _CalendarPageState extends State<CalendarPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            DashboardHeader(title: "Weekly Schedule"),
+            PageTitle(
+              title: "Weekly Schedule",
+              subtitle: "Manage and track your delivery schedule",
+              icon: Icons.calendar_month,
+            ),
             SizedBox(height: defaultPadding),
             Container(
               padding: EdgeInsets.all(defaultPadding),

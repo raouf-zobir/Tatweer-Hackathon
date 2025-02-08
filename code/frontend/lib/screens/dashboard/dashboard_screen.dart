@@ -3,6 +3,9 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../constants/style.dart';
 import '../../models/dashboard_stats.dart';
 import '../components/dashboard_header.dart';
+import '../../responsive.dart';
+import '../../components/page_header.dart';
+import '../../components/page_title.dart';
 
 class DashboardScreen extends StatefulWidget {
   @override
@@ -43,7 +46,19 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         padding: const EdgeInsets.all(defaultPadding),
         child: Column(
           children: [
-            DashboardHeader(title: "Logistics Dashboard"),
+            PageTitle(
+              title: "Dashboard Overview",
+              subtitle: "Monitor and manage your delivery operations",
+              icon: Icons.dashboard_outlined,
+              actions: [
+                IconButton(
+                  icon: Icon(Icons.refresh),
+                  onPressed: () {
+                    // Refresh dashboard data
+                  },
+                ),
+              ],
+            ),
             const SizedBox(height: defaultPadding),
             Container(
               padding: const EdgeInsets.all(defaultPadding),

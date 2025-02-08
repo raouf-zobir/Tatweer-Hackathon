@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../constants/style.dart';
-import '../components/dashboard_header.dart';
+import '../../components/page_title.dart';
 
 class Contact {
   final String name;
@@ -45,8 +45,26 @@ class _ContactPageState extends State<ContactPage> with SingleTickerProviderStat
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            DashboardHeader(title: "Contacts Management"),
-            const SizedBox(height: defaultPadding),
+            PageTitle(
+              title: "Contacts",
+              subtitle: "Manage your business contacts and communications",
+              icon: Icons.contact_page_outlined,
+              actions: [
+                ElevatedButton.icon(
+                  icon: Icon(Icons.person_add),
+                  label: Text("New Contact"),
+                  onPressed: () => _showAddContactDialog("Supplier"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: defaultPadding,
+                      vertical: defaultPadding / 2,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: defaultPadding),
             Container(
               decoration: BoxDecoration(
                 color: secondaryColor,
