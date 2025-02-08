@@ -122,13 +122,26 @@ Follow Google's documentation to set up credentials for Calendar, Contacts, and 
 
 ### Running the Application
 
-1. **Start a conversation with the assistant:**
+1. **Start the AI agent server:**
 
 ```sh
-python main.py
+python server.py
 ```
 
-The assistant is programmed to stop the conversation when the user says "goodbye".
+The AI agent will automatically:
+- Monitor the supply chain in real-time
+- Detect and analyze disruptions
+- Propose solutions for issues
+- Send notifications to relevant stakeholders
+- Update schedules as needed
+
+You can monitor the agent's activities through:
+- The Flutter web dashboard
+- Email notifications
+- Calendar updates
+- System logs
+
+> Note: The agent runs continuously and automatically responds to supply chain events. No manual conversation is needed.
 
 ## Usage Examples
 
