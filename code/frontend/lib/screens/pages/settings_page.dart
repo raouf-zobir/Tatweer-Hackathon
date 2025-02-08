@@ -1,229 +1,108 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/style.dart';
+import '../../components/page_title.dart';
 import '../../providers/theme_provider.dart';
-import '../components/dashboard_header.dart';
 
-class SettingsPage extends StatefulWidget {
+class SettingsPage extends StatelessWidget {
   const SettingsPage({Key? key}) : super(key: key);
 
   @override
-  State<SettingsPage> createState() => _SettingsPageState();
-}
-
-class _SettingsPageState extends State<SettingsPage> {
-  bool _emailNotifications = true;
-  bool _pushNotifications = true;
-  String _language = 'English'; // Default language
-  double _fontSize = 14.0;
-
-  final Map<String, String> _languages = {
-    'English': 'EN',
-    'العربية': 'AR',
-    'Français': 'FR',
-  };
-
-  @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(defaultPadding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DashboardHeader(title: "Settings"),
-            const SizedBox(height: defaultPadding),
-            _buildSettingsCard(
-              title: "General Settings",
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(defaultPadding),
+            child: Column(
               children: [
-                _buildSwitchTile(
-                  title: "Email Notifications",
-                  subtitle: "Receive email notifications",
-                  value: _emailNotifications,
-                  onChanged: (value) {
-                    setState(() => _emailNotifications = value);
-                  },
+                PageTitle(
+                  title: "Settings",
+                  subtitle: "Customize your application preferences",
+                  icon: Icons.settings_outlined,
+                  actions: [
+                    IconButton(
+                      icon: Icon(Icons.restore),
+                      tooltip: 'Reset to Default',
+                      onPressed: () {
+                        // Reset settings functionality
+                      },
+                    ),
+                  ],
                 ),
-                _buildSwitchTile(
-                  title: "Push Notifications",
-                  subtitle: "Receive push notifications",
-                  value: _pushNotifications,
-                  onChanged: (value) {
-                    setState(() => _pushNotifications = value);
-                  },
-                ),
-                _buildDropdownTile(
-                  title: "Theme Mode",
-                  value: themeProvider.themeMode.toString().split('.').last,
-                  items: ['light', 'dark', 'system'],
-                  onChanged: (value) {
-                    if (value != null) {
-                      themeProvider.setThemeMode(
-                        ThemeMode.values.firstWhere(
-                          (e) => e.toString().split('.').last == value,
+                SizedBox(height: defaultPadding),
+                Container(
+                  padding: EdgeInsets.all(defaultPadding),
+                  decoration: BoxDecoration(
+                    color: secondaryColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildSettingItem(
+                        icon: Icons.dark_mode,
+                        title: "Dark Mode",
+                        subtitle: "Toggle dark/light theme",
+                        trailing: Switch(
+                          value: themeProvider.isDarkMode,
+                          onChanged: (value) => themeProvider.toggleTheme(),
                         ),
-                      );
-                    }
-                  },
-                ),
-                ListTile(
-                  title: Text("Language"),
-                  trailing: DropdownButton<String>(
-                    value: _language,
-                    items: _languages.keys.map((String language) {
-                      return DropdownMenuItem<String>(
-                        value: language,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(_languages[language]!, 
-                              style: TextStyle(
-                                color: Colors.grey,
-                                fontSize: 12,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Text(language),
-                          ],
+                      ),
+                      _buildSettingItem(
+                        icon: Icons.notifications,
+                        title: "Notifications",
+                        subtitle: "Manage notification preferences",
+                        trailing: Icon(Icons.chevron_right),
+                      ),
+                      _buildSettingItem(
+                        icon: Icons.language,
+                        title: "Language",
+                        subtitle: "Change application language",
+                        trailing: Icon(Icons.chevron_right),
+                      ),
+                      _buildSettingItem(
+                        icon: Icons.security,
+                        title: "Security",
+                        subtitle: "Configure security settings",
+                        trailing: Icon(Icons.chevron_right),
+                      ),
+                      _buildSettingItem(
+                        icon: Icons.person,
+                        title: "Account",
+                        subtitle: "Manage your account",
+                        trailing: Icon(Icons.chevron_right),
+                      ),
+                      _buildSettingItem(
+                        icon: Icons.backup,
+                        title: "Backup",
+                        subtitle: "Configure backup settings",
+                        trailing: Switch(
+                          value: false,
+                          onChanged: (value) {},
                         ),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) {
-                      if (newValue != null) {
-                        setState(() => _language = newValue);
-                        // Add language change logic here
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Language changed to $newValue'),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      }
-                    },
+                      ),
+                    ],
                   ),
                 ),
-                _buildSliderTile(
-                  title: "Font Size",
-                  value: _fontSize,
-                  min: 12.0,
-                  max: 20.0,
-                  onChanged: (value) {
-                    setState(() => _fontSize = value);
-                  },
-                ),
               ],
             ),
-            const SizedBox(height: defaultPadding),
-            _buildSettingsCard(
-              title: "Account Settings",
-              children: [
-                ListTile(
-                  title: const Text("Change Password"),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    // Implement password change
-                  },
-                ),
-                ListTile(
-                  title: const Text("Privacy Settings"),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    // Implement privacy settings
-                  },
-                ),
-                ListTile(
-                  title: const Text("Export Data"),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    // Implement data export
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSettingsCard({
-    required String title,
-    required List<Widget> children,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(defaultPadding),
-      decoration: BoxDecoration(
-        color: secondaryColor,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge,
           ),
-          const SizedBox(height: defaultPadding),
-          ...children,
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildSwitchTile({
+  Widget _buildSettingItem({
+    required IconData icon,
     required String title,
     required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
+    required Widget trailing,
   }) {
-    return SwitchListTile(
+    return ListTile(
+      leading: Icon(icon, color: primaryColor),
       title: Text(title),
       subtitle: Text(subtitle),
-      value: value,
-      onChanged: onChanged,
-    );
-  }
-
-  Widget _buildDropdownTile({
-    required String title,
-    required String value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return ListTile(
-      title: Text(title),
-      trailing: DropdownButton<String>(
-        value: value,
-        items: items.map((String item) {
-          return DropdownMenuItem<String>(
-            value: item,
-            child: Text(item),
-          );
-        }).toList(),
-        onChanged: onChanged,
-      ),
-    );
-  }
-
-  Widget _buildSliderTile({
-    required String title,
-    required double value,
-    required double min,
-    required double max,
-    required ValueChanged<double> onChanged,
-  }) {
-    return ListTile(
-      title: Text(title),
-      subtitle: Slider(
-        value: value,
-        min: min,
-        max: max,
-        divisions: ((max - min) * 2).toInt(),
-        label: value.toStringAsFixed(1),
-        onChanged: onChanged,
-      ),
+      trailing: trailing,
     );
   }
 }

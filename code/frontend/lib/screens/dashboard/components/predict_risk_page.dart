@@ -3,6 +3,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import '../../../constants/style.dart';
+import '../../../components/header.dart';
+import '../../../utils/responsive.dart';
+import '../../../components/page_header.dart';
+import '../../../components/page_title.dart';
 
 class PredictRiskPage extends StatefulWidget {
   @override
@@ -119,133 +123,115 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
 
   @override
   Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(defaultPadding),
+        child: Column(
+          children: [
+            PageTitle(
+              title: "Risk Prediction",
+              subtitle: "Analyze and predict delivery risks",
+              icon: Icons.analytics,
+              actions: [
+                IconButton(
+                  icon: Icon(Icons.help_outline),
+                  onPressed: () {
+                    // Show help dialog
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text("Help"),
+                        content: Text("Fill in all the fields to predict delivery risks."),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text("OK"),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+            SizedBox(height: defaultPadding),
+            Container(
+              width: double.infinity,
+              child: Responsive.isMobile(context)
+                ? Column(
+                    children: [
+                      _buildMainForm(),
+                      SizedBox(height: defaultPadding),
+                      _buildResultPanel(),
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 5,
+                        child: _buildMainForm(),
+                      ),
+                      SizedBox(width: defaultPadding),
+                      Expanded(
+                        flex: 2,
+                        child: _buildResultPanel(),
+                      ),
+                    ],
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoHeader() {
+    return PageHeader(
+      title: "Delivery Risk Assessment",
+      subtitle: "Fill in all fields to get an accurate prediction of delivery risks",
+      icon: Icons.analytics,
+    );
+  }
+
+  Widget _buildResultPanel() {
     return Container(
       padding: EdgeInsets.all(defaultPadding),
       decoration: BoxDecoration(
         color: secondaryColor,
         borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 5,
-            offset: Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(),
-          SizedBox(height: defaultPadding),
-          Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Left column
-                    Expanded(
-                      child: Column(
-                        children: [
-                          _buildFormSection(
-                            "Environmental Factors",
-                            [
-                              _buildDropdownField(
-                                'Weather Condition',
-                                _weatherConditions,
-                                _weatherCondition,
-                                (val) => setState(() => _weatherCondition = val),
-                                icon: Icons.cloud,
-                              ),
-                              SizedBox(height: defaultPadding),
-                              _buildDropdownField(
-                                'Traffic Level',
-                                _trafficLevels,
-                                _trafficLevel,
-                                (val) => setState(() => _trafficLevel = val),
-                                icon: Icons.traffic,
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: defaultPadding),
-                          _buildFormSection(
-                            "Vehicle Information",
-                            [
-                              _buildDropdownField(
-                                'Vehicle Type',
-                                _vehicleTypes,
-                                _vehicleType,
-                                (val) => setState(() => _vehicleType = val),
-                                icon: Icons.local_shipping,
-                              ),
-                              SizedBox(height: defaultPadding),
-                              _buildInputField(
-                                'Vehicle Year',
-                                _vehicleYearController,
-                                TextInputType.number,
-                                icon: Icons.calendar_today,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(width: defaultPadding * 2),
-                    // Right column
-                    Expanded(
-                      child: Column(
-                        children: [
-                          _buildFormSection(
-                            "Delivery Details",
-                            [
-                              _buildInputField(
-                                'Distance (km)',
-                                _distanceController,
-                                TextInputType.number,
-                                icon: Icons.route,
-                              ),
-                              SizedBox(height: defaultPadding),
-                              _buildInputField(
-                                'Loading Weight (kg)',
-                                _loadingWeightController,
-                                TextInputType.number,
-                                icon: Icons.scale,
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: defaultPadding),
-                          _buildFormSection(
-                            "Personnel & Cargo",
-                            [
-                              _buildDropdownField(
-                                'Driver Experience',
-                                _driverExperienceLevels,
-                                _driverExperience,
-                                (val) => setState(() => _driverExperience = val),
-                                icon: Icons.person,
-                              ),
-                              SizedBox(height: defaultPadding),
-                              _buildDropdownField(
-                                'Goods Type',
-                                _goodsTypes,
-                                _goodsType,
-                                (val) => setState(() => _goodsType = val),
-                                icon: Icons.inventory,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: defaultPadding * 2),
-                _buildSubmitButton(),
-                if (_predictionResult != null) _buildPredictionResult(),
-              ],
+          Text(
+            "Prediction Result",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
+          SizedBox(height: defaultPadding),
+          if (_isLoading)
+            Center(child: CircularProgressIndicator())
+          else if (_predictionResult != null)
+            _buildPredictionResult()
+          else
+            Container(
+              padding: EdgeInsets.all(defaultPadding),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.withOpacity(0.2)),
+              ),
+              child: Center(
+                child: Text(
+                  "Submit the form to see prediction",
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+            ),
+          // Add additional information or tips here
         ],
       ),
     );
@@ -449,6 +435,143 @@ class _PredictRiskPageState extends State<PredictRiskPage> {
             style: TextStyle(
               color: _predictionResult! ? Colors.red : Colors.green,
               fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeftColumn() {
+    return Column(
+      children: [
+        _buildFormSection(
+          "Environmental Factors",
+          [
+            _buildDropdownField(
+              'Weather Condition',
+              _weatherConditions,
+              _weatherCondition,
+              (val) => setState(() => _weatherCondition = val),
+              icon: Icons.cloud,
+            ),
+            SizedBox(height: defaultPadding),
+            _buildDropdownField(
+              'Traffic Level',
+              _trafficLevels,
+              _trafficLevel,
+              (val) => setState(() => _trafficLevel = val),
+              icon: Icons.traffic,
+            ),
+          ],
+        ),
+        SizedBox(height: defaultPadding),
+        _buildFormSection(
+          "Vehicle Information",
+          [
+            _buildDropdownField(
+              'Vehicle Type',
+              _vehicleTypes,
+              _vehicleType,
+              (val) => setState(() => _vehicleType = val),
+              icon: Icons.local_shipping,
+            ),
+            SizedBox(height: defaultPadding),
+            _buildInputField(
+              'Vehicle Year',
+              _vehicleYearController,
+              TextInputType.number,
+              icon: Icons.calendar_today,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRightColumn() {
+    return Column(
+      children: [
+        _buildFormSection(
+          "Delivery Details",
+          [
+            _buildInputField(
+              'Distance (km)',
+              _distanceController,
+              TextInputType.number,
+              icon: Icons.route,
+            ),
+            SizedBox(height: defaultPadding),
+            _buildInputField(
+              'Loading Weight (kg)',
+              _loadingWeightController,
+              TextInputType.number,
+              icon: Icons.scale,
+            ),
+          ],
+        ),
+        SizedBox(height: defaultPadding),
+        _buildFormSection(
+          "Personnel & Cargo",
+          [
+            _buildDropdownField(
+              'Driver Experience',
+              _driverExperienceLevels,
+              _driverExperience,
+              (val) => setState(() => _driverExperience = val),
+              icon: Icons.person,
+            ),
+            SizedBox(height: defaultPadding),
+            _buildDropdownField(
+              'Goods Type',
+              _goodsTypes,
+              _goodsType,
+              (val) => setState(() => _goodsType = val),
+              icon: Icons.inventory,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMainForm() {
+    return Container(
+      padding: EdgeInsets.all(defaultPadding),
+      decoration: BoxDecoration(
+        color: secondaryColor,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildInfoHeader(),
+          Divider(height: defaultPadding * 2),
+          Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                if (Responsive.isMobile(context))
+                  Column(
+                    children: [
+                      _buildLeftColumn(),
+                      SizedBox(height: defaultPadding),
+                      _buildRightColumn(),
+                    ],
+                  )
+                else
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _buildLeftColumn()),
+                      SizedBox(width: defaultPadding * 2),
+                      Expanded(child: _buildRightColumn()),
+                    ],
+                  ),
+                SizedBox(height: defaultPadding * 2),
+                _buildSubmitButton(),
+              ],
             ),
           ),
         ],
