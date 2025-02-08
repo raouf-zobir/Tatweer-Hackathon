@@ -4,17 +4,15 @@ import '../../constants/style.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../dashboard/components/predict_risk_page.dart';
 import '../dashboard/components/predict_demand_page.dart';
-// import '../dashboard/components/predict_commands_page.dart';
-import '../components/dashboard_header.dart';
 import '../auth/logout_page.dart';
 import 'terms_page.dart';
 import 'settings_page.dart';
 import 'contact_page.dart';
 import 'calendar_page.dart';
-import 'ai_assistant_page.dart';
-import '../dashboard/components/predict_risk_page.dart';
 import '../../responsive.dart';
 import '../../components/page_title.dart';
+import '../dashboard/components/products_page.dart';
+import '../dashboard/components/order_lists_page.dart';
 
 class PageContainer extends StatelessWidget {
   final DashboardPage currentPage;
@@ -38,11 +36,7 @@ class PageContainer extends StatelessWidget {
       case DashboardPage.predictDemand:
         return PredictDemandPage();
       case DashboardPage.products:
-        return ResponsivePage(
-          title: "Products",
-          subtitle: "Manage your product inventory",
-          icon: Icons.inventory,
-        );
+        return ProductsPage();
       case DashboardPage.inbox:
         return ResponsivePage(
           title: "Inbox",
@@ -50,11 +44,7 @@ class PageContainer extends StatelessWidget {
           icon: Icons.inbox,
         );
       case DashboardPage.orderLists:
-        return ResponsivePage(
-          title: "Order Lists",
-          subtitle: "View and manage your orders",
-          icon: Icons.list,
-        );
+        return OrderListsPage();
       case DashboardPage.productStock:
         return ResponsivePage(
           title: "Product Stock",

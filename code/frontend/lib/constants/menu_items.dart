@@ -45,6 +45,11 @@ const List<MenuItem> sideMenuItems = [
     page: DashboardPage.calendar,
   ),
   MenuItem(
+    title: "Contact",
+    icon: Icons.contact_support,
+    page: DashboardPage.contact,
+  ),
+  MenuItem(
     title: "Settings",
     icon: Icons.settings,
     page: DashboardPage.settings,

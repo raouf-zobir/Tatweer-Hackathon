@@ -9,6 +9,9 @@ import 'package:admin/screens/auth/login_page.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/product_provider.dart';
+import 'providers/order_provider.dart';
+import 'providers/contact_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,33 +33,38 @@ Future<void> main() async {
     ),
   );
 
-  runApp(MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => MenuAppController()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => DashboardProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
+        ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProvider(create: (_) => ContactProvider()),
+      ],
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => MenuAppController(),
-      child: MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (_) => AuthProvider()),
-          ChangeNotifierProvider(create: (_) => DashboardProvider()),
-          ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ],
-        child: Consumer<ThemeProvider>(
-          builder: (context, themeProvider, child) {
-            return MaterialApp(
-              debugShowCheckedModeBanner: false,
-              title: 'Admin Dashboard',
-              themeMode: themeProvider.themeMode,
-              theme: themeProvider.getLightTheme(context),
-              darkTheme: themeProvider.getDarkTheme(context),
-              home: const LoginPage(),
-            );
-          },
-        ),
-      ),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Admin Dashboard',
+          theme: themeProvider.getLightTheme(context),
+          darkTheme: themeProvider.getDarkTheme(context),
+          themeMode: themeProvider.themeMode,
+          home: Builder(
+            builder: (context) => const LoginPage(),
+          ),
+        );
+      },
     );
   }
 }

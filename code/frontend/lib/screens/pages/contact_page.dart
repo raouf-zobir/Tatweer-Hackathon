@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../constants/style.dart';
 import '../../components/page_title.dart';
+import '../../providers/contact_provider.dart';
+import '../../models/contact.dart';
 
 class Contact {
   final String name;
@@ -25,16 +27,15 @@ class ContactPage extends StatefulWidget {
 
 class _ContactPageState extends State<ContactPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final List<Contact> _contacts = [
-    Contact(name: 'John Supplier', email: 'john@supplier.com', phone: '+1234567890', type: 'Supplier'),
-    Contact(name: 'Alice Client', email: 'alice@client.com', phone: '+1234567891', type: 'Client'),
-    Contact(name: 'Bob Distributor', email: 'bob@distributor.com', phone: '+1234567892', type: 'Distributor'),
-  ];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    // Load contacts when page initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ContactProvider>().loadContacts();
+    });
   }
 
   @override
@@ -102,74 +103,48 @@ class _ContactPageState extends State<ContactPage> with SingleTickerProviderStat
   }
 
   Widget _buildContactList(String type) {
-    final contacts = _contacts.where((c) => c.type == type).toList();
-    
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(defaultPadding),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "$type List",
-                style: Theme.of(context).textTheme.titleLarge,
+    return Consumer<ContactProvider>(
+      builder: (context, contactProvider, child) {
+        final contacts = contactProvider.getContactsByType(type);
+        
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(defaultPadding),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "$type List",
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => _showAddContactDialog(type),
+                    icon: const Icon(Icons.add),
+                    label: Text("Add $type"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: defaultPadding,
+                        vertical: defaultPadding / 2,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              ElevatedButton.icon(
-                onPressed: () => _showAddContactDialog(type),
-                icon: const Icon(Icons.add),
-                label: Text("Add $type"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: defaultPadding,
-                    vertical: defaultPadding / 2,
-                  ),
-                ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: contacts.length,
+                itemBuilder: (context, index) {
+                  final contact = contacts[index];
+                  return _buildContactCard(contact);
+                },
               ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: contacts.length,
-            itemBuilder: (context, index) {
-              final contact = contacts[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(
-                  horizontal: defaultPadding,
-                  vertical: defaultPadding / 2,
-                ),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: primaryColor,
-                    child: Text(contact.name[0]),
-                  ),
-                  title: Text(contact.name),
-                  subtitle: Text(contact.email),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.email),
-                        onPressed: () => _showContactForm(context, contact),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () => _showEditContactDialog(contact),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteContact(contact),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -214,16 +189,24 @@ class _ContactPageState extends State<ContactPage> with SingleTickerProviderStat
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _contacts.add(Contact(
+            onPressed: () async {
+              try {
+                final newContact = Contact(
                   name: nameController.text,
                   email: emailController.text,
                   phone: phoneController.text,
                   type: type,
-                ));
-              });
-              Navigator.pop(context);
+                );
+                await context.read<ContactProvider>().addContact(newContact);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Contact added successfully')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error adding contact: $e')),
+                );
+              }
             },
             child: const Text('Add'),
           ),
