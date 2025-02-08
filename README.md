@@ -1,32 +1,68 @@
-# AI Voice Assistant: Your Intelligent Conversational Companion
+# Real-Time Supply Chain Monitoring and Adaptation System
 
-**Transform your digital interactions with your own AI Voice Assistant🎙️🤖**
+## Overview
+An intelligent supply chain management solution powered by LLaMA-70B that provides real-time monitoring and adaptive response to logistics challenges. The system actively monitors, detects, analyzes, and autonomously responds to supply chain disruptions while continuously learning from historical data.
 
-This project is an advanced AI Voice Assistant that integrates Text-to-Speech (TTS) and Speech-to-Text (STT) capabilities, allowing users to communicate directly with the agent and receive vocal responses. The assistant can utilize various tools to fulfill user requests, including managing calendars, contacts, emails, and performing web searches.
+## Key Features
 
-## Features
+### Intelligent AI Agent System
+- Real-time monitoring and problem detection across multiple facilities
+- Autonomous analysis of logistics delays and production issues
+- Proactive issue identification and impact assessment
+- Smart scheduling and calendar management
+- Automated stakeholder notification system
+- Human-in-the-loop confirmation for critical decisions
 
-- **Speech-to-Text (STT)**: Convert spoken language into written text.
+### Real-Time Monitoring Capabilities
+- Multi-facility monitoring (Ports, Factories, Distribution Centers)
+- Real-time tracking of:
+  - Logistics operations
+  - Production schedules
+  - Delivery timelines
+  - Quality control checks
+- Immediate detection of delays and disruptions
 
-- **Text-to-Speech (TTS)**: Generate vocal responses from text input.
+### Adaptive Response System
+- Autonomous problem analysis and solution generation
+- Calendar-aware schedule optimization
+- Automated email notifications to stakeholders
+- Impact assessment across the supply chain
+- Coordinated response planning
 
-- **Vocal Interaction**: Engage in natural conversations with the AI assistant.
+## Example Operation
+```
+Operational Update and Issue Management Example:
 
-- **Tool Integration**: Utilize built-in tools for calendar management, contact handling, email composition, web searching, and personal knowledge base access.
+1. Real-time Schedule Monitoring:
+   - Quality Control Checks
+   - Production Line Operations
+   - Delivery Schedules
+   - Container Shipments
 
-### Available Tools
+2. Issue Detection & Analysis:
+   - Port of Jeddah: Logistics Delay
+   - Dammam Highway: Checkpoint Delay
+   - Gigafactory ME: Production Delay
+   - Food Processing: At-risk Operations
 
-- **CalendarTool**: Book events on Google Calendar with event name, date/time, and optional description.
+3. Autonomous Response:
+   - Schedule Adjustments
+   - Production Timeline Updates
+   - Stakeholder Notifications
+   - Resource Reallocation
+```
 
-- **AddContactTool**: Add new contacts to Google Contacts with name, phone number, and optional email address.
-
-- **FetchContactTool**: Retrieve contact information from Google Contacts by searching with the contact's name.
-
-- **EmailingTool**: Send emails via Gmail by providing recipient name, subject, and body content.
-
-- **SearchWebTool**: Perform web searches to gather up-to-date information.
-
-- **KnowledgeBaseTool**: Access the user's personal notes and saved information from your custom knowledge base (all the documents included in the `/files` folder)
+## Technology Stack
+- **AI Core**: LLaMA-70B for intelligent decision-making
+- **Backend**: 
+  - Python (AI Agents)
+  - FastAPI & Flask (API Services)
+- **Frontend**: Flutter/Dart Web Application
+- **Database**: Firebase
+- **Integration**: 
+  - Google Calendar API
+  - Email Service
+  - IoT Data Simulation
 
 ## How to Run
 

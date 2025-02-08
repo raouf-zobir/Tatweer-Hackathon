@@ -2,27 +2,46 @@
 
 ## System Architecture
 
-### 1. AI Agent System
-The solution comprises three main AI components:
+### 1. AI Agent System (LLaMA-70B Based)
+The solution leverages LLaMA-70B for intelligent supply chain management:
 
-#### Main Agent (Real-time Monitor)
-- Monitors real-time logistics data
-- Compares actual vs. planned schedules
-- Proposes solutions for disruptions
-- Interfaces with Google Calendar
-- Communicates with stakeholders
-- Requires human confirmation for actions
+#### Main Agent Capabilities
+- Real-time Schedule Monitoring
+  - Calendar integration
+  - Event tracking
+  - Timeline analysis
+  
+- Disruption Detection
+  - Multi-facility monitoring
+  - Delay pattern recognition
+  - Impact assessment
+  
+- Autonomous Response
+  - Solution generation
+  - Schedule optimization
+  - Stakeholder notification
+  
+- Learning System
+  - Historical data analysis
+  - Pattern recognition
+  - Response effectiveness tracking
 
-#### Predictive Analysis Agent
-- Captures historical disruption data
-- Analyzes patterns in supply chain issues
-- Updates training data automatically
-- Provides early warning for potential issues
-
-#### Sales Prediction Agent
-- Forecasts product demand
-- Assists in inventory management
-- Integrates with supply chain planning
+#### Agent Workflow
+```
+Real-time Data Input
+    ↓
+Schedule Analysis
+    ↓
+Issue Detection
+    ↓
+Impact Assessment
+    ↓
+Solution Generation
+    ↓
+Human Confirmation
+    ↓
+Implementation
+```
 
 ### 2. Data Flow
 ```
