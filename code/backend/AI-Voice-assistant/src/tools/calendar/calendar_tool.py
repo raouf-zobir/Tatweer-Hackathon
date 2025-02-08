@@ -125,109 +125,63 @@ class CalendarTool(BaseTool):
         except HttpError as error:
             return f"An error occurred: {error}"
 
-    def edit_event(self):
-        """
-        Edits an existing event on Google Calendar
-        """
+    def edit_event(self, event_id, delay_hours):
+        """Edit a single event with validation"""
         try:
             creds = self.get_credentials()
             service = build("calendar", "v3", credentials=creds)
             
             # Get the existing event
-            event = service.events().get(calendarId='primary', eventId=self.event_id).execute()
+            event = service.events().get(calendarId='primary', eventId=event_id).execute()
             
-            # Handle delay if specified
-            if self.delay_hours:
-                start_time = datetime.datetime.fromisoformat(event['start']['dateTime'])
-                new_start = start_time + datetime.timedelta(hours=self.delay_hours)
-                new_end = new_start + datetime.timedelta(hours=1)
-                
-                event['start']['dateTime'] = new_start.isoformat()
-                event['end']['dateTime'] = new_end.isoformat()
+            # Calculate new times
+            start_time = datetime.datetime.fromisoformat(event['start']['dateTime'].replace('Z', ''))
+            new_start = start_time + datetime.timedelta(hours=delay_hours)
+            new_end = new_start + (
+                datetime.datetime.fromisoformat(event['end']['dateTime'].replace('Z', '')) - 
+                start_time
+            )
             
-            # Handle other updates
-            if self.event_name:
-                event['summary'] = self.event_name
-            if self.event_datetime:
-                event_datetime = datetime.datetime.fromisoformat(self.event_datetime)
-                event['start']['dateTime'] = event_datetime.isoformat()
-                event['end']['dateTime'] = (event_datetime + datetime.timedelta(hours=1)).isoformat()
-            if self.event_description:
-                event['description'] = self.event_description
-
+            # Update event times
+            event['start']['dateTime'] = new_start.isoformat()
+            event['end']['dateTime'] = new_end.isoformat()
+            
+            # Update event
             updated_event = service.events().update(
                 calendarId='primary',
-                eventId=self.event_id,
+                eventId=event_id,
                 body=event
             ).execute()
             
-            return f"Event updated successfully: {updated_event['summary']}"
+            return {
+                "event_id": event_id,
+                "status": "updated",
+                "new_start": updated_event['start']['dateTime']
+            }
+            
+        except Exception as e:
+            return {"error": f"Failed to edit event {event_id}: {str(e)}"}
 
-        except HttpError as error:
-            return f"An error occurred: {error}"
-
-    def delete_event(self):
-        """
-        Deletes an event from Google Calendar
-        """
+    def batch_edit(self, edits):
+        """Handle multiple calendar edits in a single operation"""
         try:
-            creds = self.get_credentials()
-            service = build("calendar", "v3", credentials=creds)
-            
-            service.events().delete(
-                calendarId='primary',
-                eventId=self.event_id
-            ).execute()
-            
-            return f"Event deleted successfully"
-
-        except HttpError as error:
-            return f"An error occurred: {error}"
-
-    def initialize_synthetic_calendar(self):
-        """Populates the calendar with synthetic data from EventMonitor"""
-        try:
-            creds = self.get_credentials()
-            service = build("calendar", "v3", credentials=creds)
-            
-            # Get events from EventMonitor instead
-            event_monitor = EventMonitor(action="check_all")
-            all_events = event_monitor.SYNTHETIC_EVENTS
-            
-            today = datetime.datetime.now().date()
-            events_created = []
-            
-            # Create events for next 7 days
-            for day in range(7):
-                current_date = today + datetime.timedelta(days=day)
+            results = []
+            for edit in edits:
+                event_id = edit.get('event_id')
+                delay_hours = edit.get('delay_hours')
                 
-                for event_id, event_data in all_events.items():
-                    event_datetime = datetime.datetime.combine(
-                        current_date,
-                        datetime.datetime.strptime("09:00", "%H:%M").time()
-                    )
-                    
-                    event = {
-                        'summary': f"{event_data['type'].title()}: {event_data['details']}",
-                        'location': event_data['location'],
-                        'description': f"Event ID: {event_id}\nStatus: {event_data['status']}\nImpact: {', '.join(event_data['impact'])}",
-                        'start': {
-                            'dateTime': event_datetime.isoformat(),
-                            'timeZone': 'UTC',
-                        },
-                        'end': {
-                            'dateTime': (event_datetime + datetime.timedelta(hours=2)).isoformat(),
-                            'timeZone': 'UTC',
-                        },
-                    }
-                    
-                    created_event = service.events().insert(calendarId='primary', body=event).execute()
-                    events_created.append(created_event['id'])
-
-            return f"Successfully created {len(events_created)} events"
-
-        except HttpError as error:
-            return f"An error occurred: {error}"
+                if event_id and delay_hours is not None:
+                    result = self.edit_event(event_id, delay_hours)
+                    results.append(result)
+            
+            return {
+                "status": "success",
+                "updated": len(results),
+                "results": results
+            }
+            
+        except Exception as e:
+            return {"error": f"Batch edit failed: {str(e)}"}
 
     def edit(self):
         """Edit an event in the calendar"""
@@ -301,6 +255,69 @@ class CalendarTool(BaseTool):
 
         except Exception as e:
             return {"error": f"Failed to edit event: {str(e)}"}
+
+    def delete_event(self):
+        """
+        Deletes an event from Google Calendar
+        """
+        try:
+            creds = self.get_credentials()
+            service = build("calendar", "v3", credentials=creds)
+            
+            service.events().delete(
+                calendarId='primary',
+                eventId=self.event_id
+            ).execute()
+            
+            return f"Event deleted successfully"
+
+        except HttpError as error:
+            return f"An error occurred: {error}"
+
+    def initialize_synthetic_calendar(self):
+        """Populates the calendar with synthetic data from EventMonitor"""
+        try:
+            creds = self.get_credentials()
+            service = build("calendar", "v3", credentials=creds)
+            
+            # Get events from EventMonitor instead
+            event_monitor = EventMonitor(action="check_all")
+            all_events = event_monitor.SYNTHETIC_EVENTS
+            
+            today = datetime.datetime.now().date()
+            events_created = []
+            
+            # Create events for next 7 days
+            for day in range(7):
+                current_date = today + datetime.timedelta(days=day)
+                
+                for event_id, event_data in all_events.items():
+                    event_datetime = datetime.datetime.combine(
+                        current_date,
+                        datetime.datetime.strptime("09:00", "%H:%M").time()
+                    )
+                    
+                    event = {
+                        'summary': f"{event_data['type'].title()}: {event_data['details']}",
+                        'location': event_data['location'],
+                        'description': f"Event ID: {event_id}\nStatus: {event_data['status']}\nImpact: {', '.join(event_data['impact'])}",
+                        'start': {
+                            'dateTime': event_datetime.isoformat(),
+                            'timeZone': 'UTC',
+                        },
+                        'end': {
+                            'dateTime': (event_datetime + datetime.timedelta(hours=2)).isoformat(),
+                            'timeZone': 'UTC',
+                        },
+                    }
+                    
+                    created_event = service.events().insert(calendarId='primary', body=event).execute()
+                    events_created.append(created_event['id'])
+
+            return f"Successfully created {len(events_created)} events"
+
+        except HttpError as error:
+            return f"An error occurred: {error}"
 
     def run(self):
         """Execute the calendar tool action"""

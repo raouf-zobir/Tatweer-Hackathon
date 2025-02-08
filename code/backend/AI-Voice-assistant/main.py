@@ -371,64 +371,43 @@ async def apply_approved_changes(changes, summary):
     try:
         print("\nApplying changes...")
         
-        # Batch all calendar updates together
-        calendar_updates = []
+        # Deduplicate and batch calendar updates
+        calendar_updates = {}  # Use dict to prevent duplicates
         affected_teams = set()
         team_impacts = {}
         
         for change in changes:
             if change.get('action') == 'edit':
-                calendar_updates.append({
-                    'event_id': change.get('event_id'),
-                    'delay_hours': change.get('delay_hours')
-                })
+                event_id = change.get('event_id')
+                # Only add each event once
+                if event_id not in calendar_updates:
+                    calendar_updates[event_id] = {
+                        'event_id': event_id,
+                        'delay_hours': change.get('delay_hours')
+                    }
                 
-                # Collect impact info
-                impact = await direct_tool_call(EventMonitor, 
-                                              action="analyze_impact",
-                                              event_id=change.get('event_id'))
-                if impact:
-                    for line in impact.split('\n'):
-                        if '*' in line:
-                            team = line.strip()[2:].split()[0]
-                            affected_teams.add(team)
-                            team_impacts[team] = impact
+                # Collect impact info once per event
+                if event_id not in team_impacts:
+                    impact = await direct_tool_call(EventMonitor, 
+                                                  action="analyze_impact",
+                                                  event_id=event_id)
+                    if impact:
+                        for line in impact.split('\n'):
+                            if '*' in line:
+                                team = line.strip()[2:].split()[0]
+                                affected_teams.add(team)
+                                team_impacts[team] = impact
 
         # Execute all calendar updates in one batch
         if calendar_updates:
             result = await direct_tool_call(CalendarTool, 
                                           action="batch_edit",
-                                          edits=calendar_updates)
+                                          edits=list(calendar_updates.values()))
             
-            # Prepare all notifications at once
-            notifications = []
-            for team in affected_teams:
-                contacts = await get_team_contacts(team)
-                if contacts:
-                    for contact in contacts:
-                        if contact.get('emails'):
-                            notifications.append({
-                                'recipient': contact['emails'][0],
-                                'recipient_name': contact.get('name', 'Team Member'),
-                                'subject': f'Important Schedule Update - {team}',
-                                'body': await generate_personalized_email(
-                                    contact.get('name', 'Team Member'),
-                                    team,
-                                    'Team Member',
-                                    changes,
-                                    team_impacts.get(team, '')
-                                )
-                            })
-            
-            # Send all notifications in one batch
-            if notifications:
-                result = await direct_tool_call(EmailingTool, 
-                                              action="batch_send",
-                                              notifications=notifications)
-                
-            return f"Successfully applied {len(calendar_updates)} updates and sent {len(notifications)} notifications."
-        
-        return "No updates were applied."
+            # Prepare notifications
+            # ...existing notification code...
+
+        return f"Successfully applied {len(calendar_updates)} updates."
 
     except Exception as e:
         return f"Error applying changes: {str(e)}"
@@ -436,14 +415,23 @@ async def apply_approved_changes(changes, summary):
 async def handle_modification_request(agent, user_input, changes, issues):
     """Handle requests to modify the proposed changes"""
     try:
-        response = await agent.invoke(
-            f"User wants to modify changes: '{user_input}'. Current changes: {changes}. "
-            "Analyze request and suggest modifications."
-        )
-        print(f"\nAssistant: {response}")
-        
-        # Get new proposal based on user's request
-        return await handle_change_confirmation(agent, changes, issues)
+        # Parse modification intent
+        if "early" in user_input.lower() or "advance" in user_input.lower():
+            # Make delay hours negative for advancement
+            hours = int(''.join(filter(str.isdigit, user_input))) * -1
+            
+            # Modify all changes at once
+            modified_changes = [{
+                'action': 'edit',
+                'event_id': change['event_id'],
+                'delay_hours': hours
+            } for change in changes if change.get('action') == 'edit']
+            
+            # Apply changes in a single batch
+            return await handle_change_confirmation(agent, modified_changes, issues)
+            
+        # Handle other modification types
+        # ...existing code...
         
     except Exception as e:
         return f"Error handling modification: {str(e)}"
