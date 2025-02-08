@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../constants/style.dart';
 import '../../components/page_title.dart';
 
@@ -26,45 +27,108 @@ class CalendarPage extends StatefulWidget {
 }
 
 class _CalendarPageState extends State<CalendarPage> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final List<String> _weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   int _selectedDay = DateTime.now().weekday - 1;
   
-  final Map<int, List<ScheduleEvent>> _scheduleData = {
-    0: [ // Monday
-      ScheduleEvent(
-        title: 'Morning Deliveries',
-        description: '10 deliveries scheduled',
-        startTime: TimeOfDay(hour: 8, minute: 0),
-        endTime: TimeOfDay(hour: 11, minute: 0),
-        color: Colors.blue,
-      ),
-      ScheduleEvent(
-        title: 'Team Meeting',
-        description: 'Weekly sync',
-        startTime: TimeOfDay(hour: 14, minute: 0),
-        endTime: TimeOfDay(hour: 15, minute: 30),
-        color: Colors.orange,
-      ),
-    ],
-    2: [ // Wednesday
-      ScheduleEvent(
-        title: 'Warehouse Inspection',
-        description: 'Monthly check',
-        startTime: TimeOfDay(hour: 9, minute: 0),
-        endTime: TimeOfDay(hour: 11, minute: 0),
-        color: Colors.green,
-      ),
-    ],
-    4: [ // Friday
-      ScheduleEvent(
-        title: 'Fleet Maintenance',
-        description: 'Regular service',
-        startTime: TimeOfDay(hour: 13, minute: 0),
-        endTime: TimeOfDay(hour: 17, minute: 0),
-        color: Colors.purple,
-      ),
-    ],
-  };
+  final Map<int, List<ScheduleEvent>> _scheduleData = {};
+
+  Future<void> _saveEventToFirebase(ScheduleEvent event) async {
+    try {
+      print('Attempting to save event to Firebase...');
+      
+      // Create a document in the events collection for the specific day
+      final docRef = await _firestore
+          .collection('weekly_schedule')
+          .doc(_selectedDay.toString())
+          .collection('events')
+          .add({
+        'title': event.title,
+        'description': event.description,
+        'startTime': '${event.startTime.hour}:${event.startTime.minute}',
+        'endTime': '${event.endTime.hour}:${event.endTime.minute}',
+        'color': event.color.value,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      print('Event saved with ID: ${docRef.id}');
+
+      // Update local state
+      if (!_scheduleData.containsKey(_selectedDay)) {
+        _scheduleData[_selectedDay] = [];
+      }
+      _scheduleData[_selectedDay]!.add(event);
+      setState(() {});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Event saved successfully')),
+      );
+    } catch (e) {
+      print('Error saving event: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving event: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEventsFromFirebase();
+  }
+
+  Future<void> _loadEventsFromFirebase() async {
+    try {
+      print('Loading events from Firebase...');
+      _scheduleData.clear();
+
+      // Load events for all days
+      for (int day = 0; day < 7; day++) {
+        final snapshot = await _firestore
+            .collection('weekly_schedule')
+            .doc(day.toString())
+            .collection('events')
+            .orderBy('createdAt')
+            .get();
+
+        if (snapshot.docs.isNotEmpty) {
+          _scheduleData[day] = snapshot.docs.map((doc) {
+            final data = doc.data();
+            final startTimeParts = data['startTime'].split(':');
+            final endTimeParts = data['endTime'].split(':');
+
+            return ScheduleEvent(
+              title: data['title'],
+              description: data['description'],
+              startTime: TimeOfDay(
+                hour: int.parse(startTimeParts[0]),
+                minute: int.parse(startTimeParts[1]),
+              ),
+              endTime: TimeOfDay(
+                hour: int.parse(endTimeParts[0]),
+                minute: int.parse(endTimeParts[1]),
+              ),
+              color: Color(data['color']),
+            );
+          }).toList();
+        }
+      }
+
+      print('Events loaded successfully');
+      setState(() {});
+    } catch (e) {
+      print('Error loading events: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading events: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   Future<void> _showAddEventDialog() async {
     final titleController = TextEditingController();
@@ -174,7 +238,7 @@ class _CalendarPageState extends State<CalendarPage> {
               child: Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (titleController.text.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Please enter an event title')),
@@ -182,24 +246,17 @@ class _CalendarPageState extends State<CalendarPage> {
                   return;
                 }
 
-                setState(() {
-                  if (!_scheduleData.containsKey(_selectedDay)) {
-                    _scheduleData[_selectedDay] = [];
-                  }
-                  
-                  _scheduleData[_selectedDay]!.add(ScheduleEvent(
-                    title: titleController.text,
-                    description: descriptionController.text,
-                    startTime: startTime,
-                    endTime: endTime,
-                    color: selectedColor,
-                  ));
-                });
-                
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Event added successfully')),
+                final newEvent = ScheduleEvent(
+                  title: titleController.text,
+                  description: descriptionController.text,
+                  startTime: startTime,
+                  endTime: endTime,
+                  color: selectedColor,
                 );
+
+                await _saveEventToFirebase(newEvent);
+                await _loadEventsFromFirebase();  // Reload events
+                Navigator.pop(context);
               },
               child: Text('Add'),
             ),
@@ -378,6 +435,34 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
 
+  Future<void> _deleteEventFromFirebase(int dayIndex, int eventIndex) async {
+    try {
+      print('Deleting event from Firebase...');
+      
+      final snapshot = await _firestore
+          .collection('weekly_schedule')
+          .doc(dayIndex.toString())
+          .collection('events')
+          .get();
+
+      if (snapshot.docs.length > eventIndex) {
+        await snapshot.docs[eventIndex].reference.delete();
+        
+        setState(() {
+          _scheduleData[dayIndex]!.removeAt(eventIndex);
+          if (_scheduleData[dayIndex]!.isEmpty) {
+            _scheduleData.remove(dayIndex);
+          }
+        });
+
+        print('Event deleted successfully');
+      }
+    } catch (e) {
+      print('Error deleting event: $e');
+      throw e;
+    }
+  }
+
   void _showDeleteConfirmation(int eventIndex) {
     showDialog(
       context: context,
@@ -391,17 +476,21 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              setState(() {
-                _scheduleData[_selectedDay]!.removeAt(eventIndex);
-                if (_scheduleData[_selectedDay]!.isEmpty) {
-                  _scheduleData.remove(_selectedDay);
-                }
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Event deleted successfully')),
-              );
+            onPressed: () async {
+              try {
+                await _deleteEventFromFirebase(_selectedDay, eventIndex);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Event deleted successfully')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error deleting event: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             child: Text('Delete'),
           ),
