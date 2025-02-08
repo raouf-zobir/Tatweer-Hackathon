@@ -1,4 +1,7 @@
 import datetime
+import sys
+import os
+import json
 from typing import ClassVar, Dict, Any
 from pydantic import Field
 from ..base_tool import BaseTool
@@ -10,112 +13,27 @@ class EventMonitor(BaseTool):
     """
     action: str = Field(description="Action to perform: check_status, analyze_impact, propose_solution")
     event_id: str = Field(default=None, description="ID of the event to monitor")
+    
+    EVENTS_JSON_PATH: ClassVar[str] = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), 
+        '../../../../DelayDetector/delay_events.json'
+    )
 
-    # Fix: Add ClassVar annotation for the synthetic data
-    SYNTHETIC_EVENTS: ClassVar[Dict[str, Any]] = {
-        # Logistics Delays
-        "MAERSK_T123": {
-            "type": "logistics",
-            "status": "delayed",
-            "delay_hours": 4,
-            "location": "Port of Jeddah",
-            "impact": ["Samsung_Factory_A", "Regional_Distribution_Center"],
-            "details": "Container shipment delayed due to port congestion"
-        },
-        "DHL_TR789": {
-            "type": "logistics",
-            "status": "delayed",
-            "delay_hours": 2,
-            "location": "Dammam Highway Checkpoint",
-            "impact": ["LG_Assembly_Line", "Gulf_Distribution_Hub"],
-            "details": "Truck delivery delayed due to road maintenance"
-        },
-
-        # Manufacturing Equipment Issues
-        "SIEMENS_M456": {
-            "type": "equipment_failure",
-            "status": "breakdown",
-            "delay_hours": 6,
-            "location": "SABIC Petrochem Plant",
-            "impact": ["Chemical_Processing_A", "Packaging_Line_B", "Customer_Delivery_X"],
-            "details": "Critical pump failure in processing unit",
-            "repair_estimate": "6 hours"
-        },
-        "ABB_ROB334": {
-            "type": "equipment_failure",
-            "status": "maintenance",
-            "delay_hours": 3,
-            "location": "Toyota Assembly Riyadh",
-            "impact": ["Vehicle_Assembly", "Quality_Control", "Dealer_Network"],
-            "details": "Robotic arm malfunction on main assembly line",
-            "repair_estimate": "3 hours"
-        },
-
-        # Raw Material Shortages
-        "RM_TSMC_001": {
-            "type": "material_shortage",
-            "status": "critical",
-            "delay_hours": 48,
-            "location": "Semiconductor Facility",
-            "impact": ["iPhone_Production", "Electronics_Assembly", "Apple_Distribution"],
-            "details": "Silicon wafer shortage affecting chip production",
-            "inventory_level": "15%"
-        },
-        "RM_BASF_207": {
-            "type": "material_shortage",
-            "status": "warning",
-            "delay_hours": 24,
-            "location": "Chemical Plant Yanbu",
-            "impact": ["Polymer_Production", "Plastic_Molding", "Packaging_Supply"],
-            "details": "Low catalyst inventory affecting polymer production",
-            "inventory_level": "30%"
-        },
-
-        # Inventory Stock-outs
-        "INV_UNILEVER_554": {
-            "type": "stock_out",
-            "status": "critical",
-            "delay_hours": 12,
-            "location": "Jeddah Distribution Center",
-            "impact": ["Carrefour_KSA", "Panda_Retail", "LuLu_Group"],
-            "details": "Personal care products stock-out affecting major retailers",
-            "affected_skus": 15
-        },
-        "INV_PEPSI_332": {
-            "type": "stock_out",
-            "status": "warning",
-            "delay_hours": 8,
-            "location": "Riyadh Warehouse",
-            "impact": ["AlOthaim_Markets", "Danube_Stores", "SPAR_KSA"],
-            "details": "Beverage stock-out in central region",
-            "affected_skus": 7
-        },
-
-        # Production Delays
-        "PROD_TESLA_889": {
-            "type": "production_delay",
-            "status": "delayed",
-            "delay_hours": 10,
-            "location": "Gigafactory Middle East",
-            "impact": ["Vehicle_Assembly", "Battery_Production", "Delivery_Centers"],
-            "details": "Production line reconfiguration causing delays",
-            "completion_estimate": "85%"
-        },
-        "PROD_NESTLE_445": {
-            "type": "production_delay",
-            "status": "at_risk",
-            "delay_hours": 5,
-            "location": "Food Processing Plant",
-            "impact": ["Retail_Distribution", "Export_Division", "Cold_Storage"],
-            "details": "Quality control issues in dairy production line",
-            "completion_estimate": "70%"
-        }
-    }
+    def get_current_events(self) -> Dict[str, Any]:
+        """Fetch current events from JSON file"""
+        try:
+            if os.path.exists(self.EVENTS_JSON_PATH):
+                with open(self.EVENTS_JSON_PATH, 'r') as f:
+                    return json.load(f)
+        except Exception as e:
+            print(f"Error reading events: {e}")
+        return {}
 
     def check_status(self):
         """Check current status of operations"""
-        if self.event_id in self.SYNTHETIC_EVENTS:
-            event = self.SYNTHETIC_EVENTS[self.event_id]
+        events = self.get_current_events()
+        if self.event_id in events:
+            event = events[self.event_id]
             return {
                 "status": event["status"],
                 "details": f"{event['type'].title()} event {self.event_id} is {event['status']} at {event['location']}"
@@ -124,8 +42,9 @@ class EventMonitor(BaseTool):
 
     def analyze_impact(self):
         """Analyze the impact of a delay or issue"""
-        if self.event_id in self.SYNTHETIC_EVENTS:
-            event = self.SYNTHETIC_EVENTS[self.event_id]
+        events = self.get_current_events()
+        if self.event_id in events:
+            event = events[self.event_id]
             impact_analysis = f"Impact Analysis for {self.event_id}:\n"
             impact_analysis += f"- Primary Issue: {event['status']} at {event['location']}\n"
             impact_analysis += "- Affected Operations:\n"
@@ -136,8 +55,9 @@ class EventMonitor(BaseTool):
 
     def propose_solution(self):
         """Propose corrective actions"""
-        if self.event_id in self.SYNTHETIC_EVENTS:
-            event = self.SYNTHETIC_EVENTS[self.event_id]
+        events = self.get_current_events()
+        if self.event_id in events:
+            event = events[self.event_id]
             
             # Create calendar tool instance for status check
             calendar_tool = CalendarTool(action="view")
@@ -178,7 +98,8 @@ class EventMonitor(BaseTool):
     def check_all_operations(self):
         """Check all operations for any issues"""
         issues = []
-        for event_id, event in self.SYNTHETIC_EVENTS.items():
+        events = self.get_current_events()
+        for event_id, event in events.items():
             if event['status'] in ['delayed', 'at_risk']:
                 issues.append({
                     'id': event_id,

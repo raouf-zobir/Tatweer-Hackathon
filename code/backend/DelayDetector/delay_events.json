@@ -1,0 +1,40 @@
+{
+    "MAERSK_T123": {
+        "type": "logistics",
+        "status": "delayed",
+        "delay_hours": 4,
+        "location": "Port of Jeddah",
+        "impact": ["Samsung_Factory_A", "Regional_Distribution_Center"],
+        "details": "Container shipment delayed due to port congestion",
+        "timestamp": "2023-11-25 14:30:00"
+    },
+    "DHL_TR789": {
+        "type": "logistics",
+        "status": "delayed",
+        "delay_hours": 2,
+        "location": "Dammam Highway Checkpoint",
+        "impact": ["LG_Assembly_Line", "Gulf_Distribution_Hub"],
+        "details": "Truck delivery delayed due to road maintenance",
+        "timestamp": "2023-11-25 15:00:00"
+    },
+    "SIEMENS_M456": {
+        "type": "equipment_failure",
+        "status": "breakdown",
+        "delay_hours": 6,
+        "location": "SABIC Petrochem Plant",
+        "impact": ["Chemical_Processing_A", "Packaging_Line_B", "Customer_Delivery_X"],
+        "details": "Critical pump failure in processing unit",
+        "repair_estimate": "6 hours",
+        "timestamp": "2023-11-25 13:15:00"
+    },
+    "ABB_ROB334": {
+        "type": "equipment_failure",
+        "status": "maintenance",
+        "delay_hours": 3,
+        "location": "Toyota Assembly Riyadh",
+        "impact": ["Vehicle_Assembly", "Quality_Control", "Dealer_Network"],
+        "details": "Robotic arm malfunction on main assembly line",
+        "repair_estimate": "3 hours",
+        "timestamp": "2023-11-25 16:45:00"
+    }
+}

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../constants/style.dart';
 import '../../components/page_title.dart';
 
@@ -26,45 +27,124 @@ class CalendarPage extends StatefulWidget {
 }
 
 class _CalendarPageState extends State<CalendarPage> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final List<String> _weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   int _selectedDay = DateTime.now().weekday - 1;
   
-  final Map<int, List<ScheduleEvent>> _scheduleData = {
-    0: [ // Monday
-      ScheduleEvent(
-        title: 'Morning Deliveries',
-        description: '10 deliveries scheduled',
-        startTime: TimeOfDay(hour: 8, minute: 0),
-        endTime: TimeOfDay(hour: 11, minute: 0),
-        color: Colors.blue,
-      ),
-      ScheduleEvent(
-        title: 'Team Meeting',
-        description: 'Weekly sync',
-        startTime: TimeOfDay(hour: 14, minute: 0),
-        endTime: TimeOfDay(hour: 15, minute: 30),
-        color: Colors.orange,
-      ),
-    ],
-    2: [ // Wednesday
-      ScheduleEvent(
-        title: 'Warehouse Inspection',
-        description: 'Monthly check',
-        startTime: TimeOfDay(hour: 9, minute: 0),
-        endTime: TimeOfDay(hour: 11, minute: 0),
-        color: Colors.green,
-      ),
-    ],
-    4: [ // Friday
-      ScheduleEvent(
-        title: 'Fleet Maintenance',
-        description: 'Regular service',
-        startTime: TimeOfDay(hour: 13, minute: 0),
-        endTime: TimeOfDay(hour: 17, minute: 0),
-        color: Colors.purple,
-      ),
-    ],
-  };
+  final Map<int, List<ScheduleEvent>> _scheduleData = {};
+
+  Future<void> _saveEventToFirebase(ScheduleEvent event) async {
+    try {
+      print('Saving event to weekly schedule...');
+      
+      final dayDoc = _firestore
+          .collection('weekly_schedule')
+          .doc(_selectedDay.toString());
+
+      Map<String, dynamic> eventData = {
+        'events': FieldValue.arrayUnion([{
+          'title': event.title,
+          'description': event.description,
+          'startTime': '${event.startTime.hour}:${event.startTime.minute}',
+          'endTime': '${event.endTime.hour}:${event.endTime.minute}',
+          'color': event.color.value,
+          'timestamp': DateTime.now().toIso8601String(),
+        }]),
+        'lastUpdated': FieldValue.serverTimestamp(),
+      };
+
+      // Get the document snapshot
+      final docSnapshot = await dayDoc.get();
+
+      if (!docSnapshot.exists) {
+        // Create new document for this day
+        await dayDoc.set(eventData);
+      } else {
+        // Update existing document
+        await dayDoc.update(eventData);
+      }
+
+      // Update local state
+      if (!_scheduleData.containsKey(_selectedDay)) {
+        _scheduleData[_selectedDay] = [];
+      }
+      _scheduleData[_selectedDay]!.add(event);
+      setState(() {});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Event saved successfully')),
+      );
+    } catch (e) {
+      print('Error saving event: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving event: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEventsFromFirebase();
+  }
+
+  Future<void> _loadEventsFromFirebase() async {
+    try {
+      print('Loading weekly schedule...');
+      _scheduleData.clear();
+
+      // Load events for all days
+      for (int day = 0; day < 7; day++) {
+        final docSnapshot = await _firestore
+            .collection('weekly_schedule')
+            .doc(day.toString())
+            .get();
+
+        if (docSnapshot.exists) {
+          final data = docSnapshot.data();
+          final events = data?['events'] as List<dynamic>? ?? [];
+
+          for (var eventData in events) {
+            final startTimeParts = eventData['startTime'].split(':');
+            final endTimeParts = eventData['endTime'].split(':');
+
+            final event = ScheduleEvent(
+              title: eventData['title'],
+              description: eventData['description'],
+              startTime: TimeOfDay(
+                hour: int.parse(startTimeParts[0]),
+                minute: int.parse(startTimeParts[1]),
+              ),
+              endTime: TimeOfDay(
+                hour: int.parse(endTimeParts[0]),
+                minute: int.parse(endTimeParts[1]),
+              ),
+              color: Color(eventData['color']),
+            );
+
+            if (!_scheduleData.containsKey(day)) {
+              _scheduleData[day] = [];
+            }
+            _scheduleData[day]!.add(event);
+          }
+        }
+      }
+
+      print('Events loaded successfully');
+      setState(() {});
+    } catch (e) {
+      print('Error loading weekly schedule: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading events: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   Future<void> _showAddEventDialog() async {
     final titleController = TextEditingController();
@@ -174,7 +254,7 @@ class _CalendarPageState extends State<CalendarPage> {
               child: Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (titleController.text.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Please enter an event title')),
@@ -182,24 +262,17 @@ class _CalendarPageState extends State<CalendarPage> {
                   return;
                 }
 
-                setState(() {
-                  if (!_scheduleData.containsKey(_selectedDay)) {
-                    _scheduleData[_selectedDay] = [];
-                  }
-                  
-                  _scheduleData[_selectedDay]!.add(ScheduleEvent(
-                    title: titleController.text,
-                    description: descriptionController.text,
-                    startTime: startTime,
-                    endTime: endTime,
-                    color: selectedColor,
-                  ));
-                });
-                
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Event added successfully')),
+                final newEvent = ScheduleEvent(
+                  title: titleController.text,
+                  description: descriptionController.text,
+                  startTime: startTime,
+                  endTime: endTime,
+                  color: selectedColor,
                 );
+
+                await _saveEventToFirebase(newEvent);
+                await _loadEventsFromFirebase();  // Reload events
+                Navigator.pop(context);
               },
               child: Text('Add'),
             ),
@@ -347,7 +420,7 @@ class _CalendarPageState extends State<CalendarPage> {
               child: Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (titleController.text.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Please enter an event title')),
@@ -355,20 +428,57 @@ class _CalendarPageState extends State<CalendarPage> {
                   return;
                 }
 
-                setState(() {
-                  _scheduleData[_selectedDay]![eventIndex] = ScheduleEvent(
-                    title: titleController.text,
-                    description: descriptionController.text,
-                    startTime: startTime,
-                    endTime: endTime,
-                    color: selectedColor,
+                try {
+                  // Get the document reference
+                  final dayDoc = _firestore
+                      .collection('weekly_schedule')
+                      .doc(_selectedDay.toString());
+                  
+                  // Get current events
+                  final docSnapshot = await dayDoc.get();
+                  final data = docSnapshot.data();
+                  final events = List<Map<String, dynamic>>.from(data?['events'] ?? []);
+                  
+                  // Update the specific event
+                  events[eventIndex] = {
+                    'title': titleController.text,
+                    'description': descriptionController.text,
+                    'startTime': '${startTime.hour}:${startTime.minute}',
+                    'endTime': '${endTime.hour}:${endTime.minute}',
+                    'color': selectedColor.value,
+                    'timestamp': DateTime.now().toIso8601String(),
+                  };
+
+                  // Update Firebase
+                  await dayDoc.update({
+                    'events': events,
+                    'lastUpdated': FieldValue.serverTimestamp(),
+                  });
+
+                  // Update local state
+                  setState(() {
+                    _scheduleData[_selectedDay]![eventIndex] = ScheduleEvent(
+                      title: titleController.text,
+                      description: descriptionController.text,
+                      startTime: startTime,
+                      endTime: endTime,
+                      color: selectedColor,
+                    );
+                  });
+                  
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Event updated successfully')),
                   );
-                });
-                
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Event updated successfully')),
-                );
+                } catch (e) {
+                  print('Error updating event: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error updating event: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               },
               child: Text('Update'),
             ),
@@ -376,6 +486,44 @@ class _CalendarPageState extends State<CalendarPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _deleteEventFromFirebase(int dayIndex, int eventIndex) async {
+    try {
+      print('Deleting event from Firebase...');
+      
+      final dayDoc = _firestore
+          .collection('weekly_schedule')
+          .doc(dayIndex.toString());
+      
+      final docSnapshot = await dayDoc.get();
+
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
+        final events = List<Map<String, dynamic>>.from(data?['events'] ?? []);
+        
+        // Remove the specific event
+        events.removeAt(eventIndex);
+
+        // Update document with new events array
+        await dayDoc.update({
+          'events': events,
+          'lastUpdated': FieldValue.serverTimestamp(),
+        });
+        
+        setState(() {
+          _scheduleData[dayIndex]!.removeAt(eventIndex);
+          if (_scheduleData[dayIndex]!.isEmpty) {
+            _scheduleData.remove(dayIndex);
+          }
+        });
+
+        print('Event deleted successfully');
+      }
+    } catch (e) {
+      print('Error deleting event: $e');
+      throw e;
+    }
   }
 
   void _showDeleteConfirmation(int eventIndex) {
@@ -391,17 +539,21 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              setState(() {
-                _scheduleData[_selectedDay]!.removeAt(eventIndex);
-                if (_scheduleData[_selectedDay]!.isEmpty) {
-                  _scheduleData.remove(_selectedDay);
-                }
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Event deleted successfully')),
-              );
+            onPressed: () async {
+              try {
+                await _deleteEventFromFirebase(_selectedDay, eventIndex);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Event deleted successfully')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error deleting event: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             child: Text('Delete'),
           ),
@@ -412,25 +564,108 @@ class _CalendarPageState extends State<CalendarPage> {
 
   Widget _buildEventCard(ScheduleEvent event, int index) {
     return Card(
-      margin: EdgeInsets.only(bottom: defaultPadding),
-      child: ListTile(
-        leading: Container(
-          width: 4,
-          color: event.color,
+      elevation: 4,
+      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: event.color.withOpacity(0.5),
+          width: 1,
         ),
-        title: Text(event.title),
-        subtitle: Text(event.description),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '${event.startTime.format(context)} - ${event.endTime.format(context)}',
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                event.color.withOpacity(0.1),
+                Colors.transparent,
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
             ),
-            IconButton(
-              icon: Icon(Icons.more_vert),
-              onPressed: () => _showEventOptions(event, index),
+          ),
+          child: IntrinsicHeight(
+            child: Row(
+              children: [
+                Container(
+                  width: 6,
+                  decoration: BoxDecoration(
+                    color: event.color,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      bottomLeft: Radius.circular(12),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                event.title,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.more_vert, color: Colors.white70),
+                              onPressed: () => _showEventOptions(event, index),
+                              padding: EdgeInsets.zero,
+                              constraints: BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                        if (event.description.isNotEmpty) ...[
+                          SizedBox(height: 4),
+                          Text(
+                            event.description,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white70,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.access_time,
+                              size: 16,
+                              color: event.color,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              '${event.startTime.format(context)} - ${event.endTime.format(context)}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

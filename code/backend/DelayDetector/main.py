@@ -1,4 +1,6 @@
 import requests
+import json
+import os
 from datetime import datetime, timedelta
 
 API_KEY = '5b3ce3597851110001cf6248f786fdc79a2449c1b8c4b1a8ed0369af'
@@ -10,6 +12,9 @@ annaba = [7.7667, 36.9000]  # Destination
 
 # OpenRouteService API URL
 api_url = "https://api.openrouteservice.org/v2/directions/driving-car"
+
+# Add this constant at the top
+EVENTS_JSON_PATH = os.path.join(os.path.dirname(__file__), 'delay_events.json')
 
 # Function to convert seconds to hours, minutes, and seconds
 def format_time(seconds):
@@ -36,6 +41,16 @@ def get_eta(start, end):
     else:
         print("Error:", response.status_code, response.text)
         return None
+
+def load_existing_events():
+    if os.path.exists(EVENTS_JSON_PATH):
+        with open(EVENTS_JSON_PATH, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_events(events):
+    with open(EVENTS_JSON_PATH, 'w') as f:
+        json.dump(events, f, indent=4)
 
 # Planned departure time from Algiers
 departure_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -88,3 +103,43 @@ if planned_eta and current_eta:
         print(f"On track with no real-time delay.")
 else:
     print("Failed to calculate delays.")
+
+def get_formatted_delay_event():
+    if planned_eta and current_eta:
+        # Calculate delays
+        planned_arrival_time = departure_time + timedelta(seconds=planned_eta)
+        time_spent = (current_time - departure_time).total_seconds()
+        travel_to_constantine = planned_eta - current_eta
+        real_time_delay = (time_spent + current_eta) - planned_eta
+
+        # Create unique event ID
+        event_id = f"TRANSPORT_{datetime.now().strftime('%Y%m%d_%H%M')}"
+
+        # Load existing events
+        events = load_existing_events()
+
+        # Add new event
+        events[event_id] = {
+            "type": "logistics",
+            "status": "delayed" if real_time_delay > 0 else "on_track",
+            "delay_hours": real_time_delay / 3600,
+            "location": "Constantine",
+            "impact": ["Annaba_Distribution", "Regional_Delivery_Network"],
+            "details": f"Transport delay of {format_time(real_time_delay)} detected",
+            "planned_arrival": planned_arrival_time.strftime("%H:%M:%S"),
+            "current_position": "Constantine",
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        # Save updated events
+        save_events(events)
+        return events[event_id]
+    return None
+
+if __name__ == "__main__":
+    delay_event = get_formatted_delay_event()
+    if delay_event:
+        print("New delay event detected and saved:")
+        print(json.dumps(delay_event, indent=2))
+    else:
+        print("No delay event to report")
