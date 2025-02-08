@@ -22,18 +22,27 @@ class _PredictDemandPageState extends State<PredictDemandPage> {
   Future<void> _submitPrediction() async {
     if (_formKey.currentState!.validate() && _selectedDate != null) {
       setState(() => _isLoading = true);
-      
+
       try {
+        // Format the date to "DD.MM.YYYY"
+        final formattedDate =
+            "${_selectedDate!.day.toString().padLeft(2, '0')}.${_selectedDate!.month.toString().padLeft(2, '0')}.${_selectedDate!.year}";
+
         final response = await http.post(
-          Uri.parse('http://localhost:8000/predict_demand/'),
+          Uri.parse('http://localhost:5000/predict_demand'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'date': _selectedDate!.toIso8601String(),
+            'date': formattedDate, // Use the formatted date
             'temperature': double.parse(_temperatureController.text),
           }),
         );
 
         if (response.statusCode == 200) {
+          final result = jsonDecode(response.body);
+          setState(() {
+            _predictedDemand = result['forecast'].round();
+            _isLoading = false;
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Prediction completed successfully!'),
@@ -176,7 +185,8 @@ class _PredictDemandPageState extends State<PredictDemandPage> {
               onChanged: _formatDateInput,
               validator: (val) {
                 if (val == null || val.isEmpty) return 'Required';
-                if (val.length < 10) return 'Please complete the date (DD/MM/YYYY)';
+                if (val.length < 10)
+                  return 'Please complete the date (DD/MM/YYYY)';
                 if (!RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(val)) {
                   return 'Invalid format. Use: DD/MM/YYYY';
                 }
@@ -190,14 +200,16 @@ class _PredictDemandPageState extends State<PredictDemandPage> {
                   return 'Invalid date numbers';
                 }
                 if (day < 1 || day > 31) return 'Day must be between 1-31';
-                if (month < 1 || month > 12) return 'Month must be between 1-12';
-                if (year < 2020 || year > 2025) return 'Year must be between 2020-2025';
+                if (month < 1 || month > 12)
+                  return 'Month must be between 1-12';
+                if (year < 2020 || year > 2025)
+                  return 'Year must be between 2020-2025';
 
                 try {
                   _selectedDate = DateTime(year, month, day);
                   // Check if it's a valid date (e.g., not 31/04/2023)
-                  if (_selectedDate!.day != day || 
-                      _selectedDate!.month != month || 
+                  if (_selectedDate!.day != day ||
+                      _selectedDate!.month != month ||
                       _selectedDate!.year != year) {
                     return 'Invalid date for selected month';
                   }
