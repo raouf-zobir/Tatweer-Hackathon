@@ -25,3 +25,22 @@ This flutter dashboard library is versatile; it's tailored to work seamlessly on
 ![Preview](/gif.gif)
 
 ![App UI](/ui.png)
+
+
+# About Code
+## Backend
+- Our backend is fully functional and ensures smooth data management with the following features:
+
+ - Robust Input Validation: Only allows correct character types (e.g., numbers, days, or selections).
+ - Real-Time Data Handling: All displayed data is fetched directly from Firebase.
+ - Instant Updates: Any edits are immediately reflected in the database.
+ - Contact Management: Contact details can be updated, and changes are synced in real-time.
+
+
+##Frontend
+- Our frontend is designed for a smooth and user-friendly experience with the following features:
+
+ - Responsive Design: Adapts seamlessly to different screen sizes.
+ - Fully Dynamic: All content updates automatically based on data changes.
+ - Easy-to-Use UI: Simple and intuitive interface for a great user experience.
+ - Flexible Layout: Adjusts efficiently to various use cases and user needs.
