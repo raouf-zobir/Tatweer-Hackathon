@@ -21,6 +21,12 @@ An intelligent supply chain management solution powered by LLaMA-70B that provid
   - Delivery timelines
   - Quality control checks
 - Immediate detection of delays and disruptions
+- Advanced Delay Detection System:
+  - Real-time GPS position tracking
+  - Route analysis using OpenRouteService API
+  - ETA calculations and updates
+  - Automated mismatch detection between planned and actual schedules
+  - Real-time delay notifications
 
 ### Adaptive Response System
 - Autonomous problem analysis and solution generation
@@ -63,6 +69,17 @@ Operational Update and Issue Management Example:
   - Google Calendar API
   - Email Service
   - IoT Data Simulation
+
+## System Components
+
+### Delay Detector
+The system uses OpenRouteService API to:
+- Calculate real-time ETAs based on current vehicle positions
+- Compare actual progress against planned schedules
+- Detect two types of delays:
+  - **Planned Delay**: Deviation from original schedule
+  - **Real-Time Delay**: Updated ETA based on current position
+- Automatically trigger AI agent responses when delays are detected
 
 ## How to Run
 
