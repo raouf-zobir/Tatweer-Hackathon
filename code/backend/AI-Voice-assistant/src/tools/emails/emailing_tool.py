@@ -10,9 +10,11 @@ class EmailingTool(BaseTool):
     """
     A tool for sending emails using Gmail
     """
-    recipient_name: str = Field(description='Name of the email recipient')
-    subject: str = Field(description='Subject of the email')
-    body: str = Field(description='Body content of the email')
+    action: str = Field(description="Action to perform (send)")
+    recipient: str = Field(description="Email recipient address")
+    recipient_name: str = Field(description="Name of the recipient")
+    subject: str = Field(description="Email subject line")
+    body: str = Field(description="Email body content")
 
     def fetch_recipient_email(self):
         """
@@ -52,9 +54,17 @@ class EmailingTool(BaseTool):
         except Exception as e:
             return f"Email was not sent successfully, error: {e}"
 
+    def send(self):
+        """Send an email (simulated for now)"""
+        if not all([self.recipient, self.subject, self.body]):
+            return {"error": "Missing required email fields"}
+            
+        # Simulate email sending
+        print(f"\nSending email to: {self.recipient}")
+        print(f"Subject: {self.subject}")
+        return {"status": "sent", "to": self.recipient}
+
     def run(self):
-        try:
-            recipient_email = self.fetch_recipient_email()
-            return self.send_email_with_gmail(recipient_email)
-        except Exception as e:
-            return f"Failed to send email: {e}"
+        if self.action == "send":
+            return self.send()
+        return {"error": "Invalid action specified"}

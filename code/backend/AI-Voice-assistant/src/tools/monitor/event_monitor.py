@@ -2,6 +2,7 @@ import datetime
 from typing import ClassVar, Dict, Any
 from pydantic import Field
 from ..base_tool import BaseTool
+from .. import CalendarTool  # Import from tools package
 
 class EventMonitor(BaseTool):
     """
@@ -137,6 +138,22 @@ class EventMonitor(BaseTool):
         """Propose corrective actions"""
         if self.event_id in self.SYNTHETIC_EVENTS:
             event = self.SYNTHETIC_EVENTS[self.event_id]
+            
+            # Create calendar tool instance for status check
+            calendar_tool = CalendarTool(action="view")
+            calendar_status = calendar_tool.run()
+            
+            # Find actual event ID if it exists
+            actual_event_id = None
+            if isinstance(calendar_status, str):
+                for line in calendar_status.split('\n'):
+                    if self.event_id in line:
+                        # Extract ID from line
+                        event_id_part = line.split('(ID: ')[-1].strip(')')
+                        if event_id_part:
+                            actual_event_id = event_id_part
+                            break
+
             if event['type'] == 'logistics':
                 return {
                     "proposed_actions": [
@@ -144,7 +161,8 @@ class EventMonitor(BaseTool):
                         f"Update delivery time for {event['impact'][1]}",
                         "Notify affected teams"
                     ],
-                    "requires_approval": True
+                    "requires_approval": True,
+                    "calendar_event_id": actual_event_id or self.event_id
                 }
             elif event['type'] == 'production':
                 return {
