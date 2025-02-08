@@ -235,58 +235,69 @@ class CalendarTool(BaseTool):
             if not self.event_id:
                 return {"error": "No event ID provided"}
 
-            # Check if this is a monitored event
-            if self.event_id in self._monitored_events:
-                event = self._monitored_events[self.event_id]
+            creds = self.get_credentials()
+            service = build("calendar", "v3", credentials=creds)
+
+            # First try to find the event by its ID
+            try:
+                event = service.events().get(calendarId='primary', eventId=self.event_id).execute()
+            except HttpError:
+                # If not found, search for events with matching summary
+                events_result = service.events().list(
+                    calendarId='primary',
+                    q=self.event_id,  # Search by event ID in summary/description
+                    singleEvents=True,
+                    orderBy='startTime'
+                ).execute()
+                events = events_result.get('items', [])
                 
-                if self.delay_hours:
-                    # Update the event timing
-                    event['start_time'] += datetime.timedelta(hours=self.delay_hours)
-                    
-                    # Create or update in Google Calendar
-                    creds = self.get_credentials()
-                    service = build("calendar", "v3", credentials=creds)
-                    
-                    calendar_event = {
-                        'summary': event['summary'],
-                        'location': event['location'],
-                        'description': f"Monitored Event ID: {self.event_id}",
+                if not events:
+                    # If no events found, create a new one
+                    base_date = datetime.datetime.now().replace(hour=8, minute=0, second=0, microsecond=0)
+                    event = {
+                        'summary': f"{self.event_id}",
                         'start': {
-                            'dateTime': event['start_time'].isoformat(),
+                            'dateTime': base_date.isoformat(),
                             'timeZone': 'UTC',
                         },
                         'end': {
-                            'dateTime': (event['start_time'] + datetime.timedelta(hours=event['duration'])).isoformat(),
+                            'dateTime': (base_date + datetime.timedelta(hours=1)).isoformat(),
                             'timeZone': 'UTC',
                         },
                     }
-                    
-                    # Check if event exists in Google Calendar
-                    try:
-                        existing_event = service.events().get(
-                            calendarId='primary', 
-                            eventId=self.event_id
-                        ).execute()
-                        # Update existing event
-                        updated_event = service.events().update(
-                            calendarId='primary',
-                            eventId=self.event_id,
-                            body=calendar_event
-                        ).execute()
-                    except HttpError:
-                        # Create new event
-                        created_event = service.events().insert(
-                            calendarId='primary',
-                            body=calendar_event
-                        ).execute()
-                    
-                    return {
-                        "status": "updated",
-                        "event_id": self.event_id,
-                        "new_time": event['start_time'].isoformat()
-                    }
+                else:
+                    event = events[0]  # Use the first matching event
 
-            return {"error": f"Event {self.event_id} not found"}
+            # Apply the delay
+            if self.delay_hours:
+                start_time = datetime.datetime.fromisoformat(event['start']['dateTime'].replace('Z', ''))
+                new_start = start_time + datetime.timedelta(hours=self.delay_hours)
+                
+                # Update event times
+                event['start']['dateTime'] = new_start.isoformat()
+                event['end']['dateTime'] = (new_start + datetime.timedelta(hours=1)).isoformat()
+                
+                # Update or create event
+                try:
+                    updated_event = service.events().update(
+                        calendarId='primary',
+                        eventId=event['id'],
+                        body=event
+                    ).execute()
+                except HttpError:
+                    updated_event = service.events().insert(
+                        calendarId='primary',
+                        body=event
+                    ).execute()
+
+                return {
+                    "status": "updated",
+                    "event_id": updated_event['id'],
+                    "summary": updated_event['summary'],
+                    "new_time": updated_event['start']['dateTime']
+                }
+
+            return {"error": "No changes specified"}
 
         except Exception as e:
             return {"error": f"Failed to edit event: {str(e)}"}
