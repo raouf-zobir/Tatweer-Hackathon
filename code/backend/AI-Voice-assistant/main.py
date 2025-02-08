@@ -10,6 +10,10 @@ from src.tools.monitor.event_monitor import EventMonitor
 import time
 from colorama import Fore
 import json
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import uvicorn
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
@@ -26,10 +30,61 @@ tools_list = [
 
 agent = Agent("Assistant Agent", model, tools_list, system_prompt=assistant_prompt)
 
+app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+
+class CommandRequest(BaseModel):
+    command: str
+
+class CommandResponse(BaseModel):
+    response: str
+
+class StartupMessageResponse(BaseModel):
+    message: str
+
+class UserDecisionRequest(BaseModel):
+    decision: str
+
+@app.post("/handle_command", response_model=CommandResponse)
+async def handle_command_endpoint(request: CommandRequest):
+    raise HTTPException(status_code=500, detail="Error processing command")
+
+@app.get("/startup_message", response_model=StartupMessageResponse)
+async def get_startup_message():
+    message = await startup_sequence(agent)
+    return StartupMessageResponse(message=message)
+
+@app.post("/user_decision", response_model=CommandResponse)
+async def handle_user_decision(request: UserDecisionRequest):
+    decision = request.decision.lower()
+    if any(word in decision for word in ['yes', 'approve', 'accept', 'proceed', 'do this']):
+        response = await apply_approved_changes(changes, summary)
+    elif any(word in decision for word in ['no', 'cancel', 'reject', 'stop']):
+        response = "Changes cancelled. Let me know if you'd like to explore other options."
+    elif any(word in decision for word in ['modify', 'change', 'adjust', 'different']):
+        response = await handle_modification_request(agent, decision, changes, issues)
+    elif 'explain' in decision:
+        response = agent.invoke(f"Explain this aspect of the changes: {decision}")
+    else:
+        response = "I didn't understand. Please use 'approve', 'modify', 'explain', or 'cancel'."
+    return CommandResponse(response=response)
+
+@app.on_event("startup")
+async def startup_event():
+    await startup_sequence(agent)
+
 async def handle_command(agent, command):
-    """Handle a single command with retries"""
-    max_retries = 3
-    retry_delay = 20  # seconds
+    """Handle a single command with retries and exponential backoff"""
+    max_retries = 5
+    base_delay = 10  # seconds
     
     for attempt in range(max_retries):
         try:
@@ -37,15 +92,17 @@ async def handle_command(agent, command):
             if response and response != "None":
                 return response
             if attempt < max_retries - 1:
-                print(f"\nRetrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
+                delay = base_delay * (2 ** attempt)  # Exponential backoff
+                print(f"\nRetrying in {delay} seconds...")
+                await asyncio.sleep(delay)
             else:
                 return "I'm having trouble processing that request. Please try again later."
         except Exception as e:
             print(f"\nError (attempt {attempt + 1}/{max_retries}): {str(e)}")
             if attempt < max_retries - 1:
-                print(f"Retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
+                delay = base_delay * (2 ** attempt)  # Exponential backoff
+                print(f"Retrying in {delay} seconds...")
+                await asyncio.sleep(delay)
             else:
                 return "I encountered an error. Please try again later."
 
@@ -147,34 +204,27 @@ async def handle_change_confirmation(agent, changes, issues):
         summary = await generate_comprehensive_summary(calendar_status, issues, changes)
         print(summary)
         
-        print("\n=== ACTION REQUIRED ===")
-        print("Please review the above summary and choose:")
-        print("1. 'approve' - Apply all changes as described")
-        print("2. 'modify' - Adjust specific changes")
-        print("3. 'explain' - Get more details about specific changes")
-        print("4. 'cancel' - Cancel all changes")
+        # Simulate user input for testing purposes
+        user_input = "approve"  # Replace this with actual user input from the frontend
         
-        while True:
-            user_input = input("\nYour decision: ").strip().lower()
-            
-            if any(word in user_input for word in ['yes', 'approve', 'accept', 'proceed', 'do this']):
-                return await apply_approved_changes(changes, summary)
-            
-            elif any(word in user_input for word in ['no', 'cancel', 'reject', 'stop']):
-                return "Changes cancelled. Let me know if you'd like to explore other options."
-            
-            elif any(word in user_input for word in ['modify', 'change', 'adjust', 'different']):
-                return await handle_modification_request(agent, user_input, changes, issues)
-            
-            elif 'explain' in user_input:
-                print("\nWhat specific aspect would you like me to explain?")
-                aspect = input("Your question: ")
-                response = await agent.invoke(f"Explain this aspect of the changes: {aspect}")
-                print(f"\nAssistant: {response}")
-                print("\nWould you like to proceed with the changes?")
-            
-            else:
-                print("\nI didn't understand. Please use 'approve', 'modify', 'explain', or 'cancel'.")
+        if any(word in user_input for word in ['yes', 'approve', 'accept', 'proceed', 'do this']):
+            return await apply_approved_changes(changes, summary)
+        
+        elif any(word in user_input for word in ['no', 'cancel', 'reject', 'stop']):
+            return "Changes cancelled. Let me know if you'd like to explore other options."
+        
+        elif any(word in user_input for word in ['modify', 'change', 'adjust', 'different']):
+            return await handle_modification_request(agent, user_input, changes, issues)
+        
+        elif 'explain' in user_input:
+            print("\nWhat specific aspect would you like me to explain?")
+            aspect = "impact"  # Replace this with actual user input from the frontend
+            response = agent.invoke(f"Explain this aspect of the changes: {aspect}")
+            print(f"\nAssistant: {response}")
+            print("\nWould you like to proceed with the changes?")
+        
+        else:
+            print("\nI didn't understand. Please use 'approve', 'modify', 'explain', or 'cancel'.")
     except Exception as e:
         return f"Error during confirmation: {str(e)}"
 
@@ -479,42 +529,37 @@ async def handle_modification_request(agent, user_input, changes, issues):
 
 async def startup_sequence(agent):
     """Initial startup sequence to check for problems and show solutions"""
-    print("\nAssistant: Initializing system and checking for operational issues...")
+    message = "\nAssistant: Initializing system and checking for operational issues...\n"
     
     try:
         # Check calendar directly - no initialization
-        print("\nChecking calendar...")
+        message += "\nChecking calendar...\n"
         calendar_status = await direct_tool_call(CalendarTool, action="view")
-        print("\nCurrent Schedule:")
-        print(calendar_status)
+        message += "\nCurrent Schedule:\n" + calendar_status
 
         # Check for issues directly
-        print("\nChecking for operational issues...")
+        message += "\nChecking for operational issues...\n"
         issues = await direct_tool_call(EventMonitor, action="check_all")
         
         if issues and len(issues) > 0:
             all_changes = []
-            print("\nFound operational issues:")
+            message += "\nFound operational issues:\n"
             
             for issue in issues:
-                print(f"\n- {issue['type'].title()} issue: {issue['details']}")
+                message += f"\n- {issue['type'].title()} issue: {issue['details']}\n"
                 
                 # Get impact analysis
-                impact = await direct_tool_call(EventMonitor, 
-                                              action="analyze_impact",
-                                              event_id=issue['id'])
-                print(impact)
+                impact = await direct_tool_call(EventMonitor, action="analyze_impact", event_id=issue['id'])
+                message += impact
                 
                 # Get solutions
-                solutions = await direct_tool_call(EventMonitor,
-                                                 action="propose_solution",
-                                                 event_id=issue['id'])
+                solutions = await direct_tool_call(EventMonitor, action="propose_solution", event_id=issue['id'])
                 
                 if isinstance(solutions, dict) and 'proposed_actions' in solutions:
                     changes = []
-                    print("\nProposed actions:")
+                    message += "\nProposed actions:\n"
                     for action in solutions['proposed_actions']:
-                        print(f"  - {action}")
+                        message += f"  - {action}\n"
                         # Convert action to calendar change
                         if "Reschedule" in action:
                             event_id = issue['id']
@@ -529,16 +574,17 @@ async def startup_sequence(agent):
                 time.sleep(1)
             
             if all_changes:
-                result = await handle_change_confirmation(agent, all_changes, issues)
-                print(f"\n{result}")
+                summary = await generate_comprehensive_summary(calendar_status, issues, all_changes)
+                message += f"\n{summary}"
         else:
-            print("\nNo operational issues detected.")
+            message += "\nNo operational issues detected.\n"
 
     except Exception as e:
-        print(Fore.RED + f"\nError during startup: {str(e)}")
-        print("Continuing with basic operation mode...")
+        message += Fore.RED + f"\nError during startup: {str(e)}\n"
+        message += "Continuing with basic operation mode...\n"
     
-    print("\nAssistant: I'm ready to help you manage operations. What would you like to do?")
+    message += "\nAssistant: I'm ready to help you manage operations. What would you like to do?\n"
+    return message
 
 async def text_conversation_loop():
     print("\nAssistant: Hello! I'm your operations assistant. Type 'quit' to exit.")
@@ -560,5 +606,4 @@ async def text_conversation_loop():
 
 if __name__ == "__main__":
     # Run the text-based conversation loop
-    asyncio.run(text_conversation_loop())
-    asyncio.run(text_conversation_loop())
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class AIAssistantPage extends StatefulWidget {
   @override
@@ -24,6 +26,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
+    _fetchInitializationMessage();
   }
 
   void _initializeSpeech() async {
@@ -69,6 +72,27 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
     setState(() => _isListening = false);
   }
 
+  Future<void> _fetchInitializationMessage() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await http.get(Uri.parse('http://localhost:8000/startup_message'));
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        setState(() {
+          _chatHistory.add({'ai': responseData['message']});
+          _isLoading = false;
+        });
+      } else {
+        _showMessage('Error: ${response.reasonPhrase}');
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      _showMessage('Error: Failed to fetch initialization message. Please ensure the backend is running.');
+      setState(() => _isLoading = false);
+    }
+    _scrollToBottom();
+  }
+
   Future<void> _handleSubmit() async {
     final message = _textController.text.trim();
     if (message.isEmpty) {
@@ -86,13 +110,53 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
     });
     _scrollToBottom();
 
-    // Simulated AI processing
-    await Future.delayed(Duration(seconds: 1));
-    
-    setState(() {
-      _isLoading = false;
-      _chatHistory.add({'ai': 'AI Response to: $message'});
-    });
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8000/handle_command'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'command': message}),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        setState(() {
+          _isLoading = false;
+          _chatHistory.add({'ai': responseData['response']});
+        });
+      } else {
+        _showMessage('Error: ${response.reasonPhrase}');
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      _showMessage('Error: $e');
+      setState(() => _isLoading = false);
+    }
+    _scrollToBottom();
+  }
+
+  Future<void> _handleUserDecision(String decision) async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8000/user_decision'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'decision': decision}),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        setState(() {
+          _isLoading = false;
+          _chatHistory.add({'ai': responseData['response']});
+        });
+      } else {
+        _showMessage('Error: ${response.reasonPhrase}');
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      _showMessage('Error: $e');
+      setState(() => _isLoading = false);
+    }
     _scrollToBottom();
   }
 
@@ -204,36 +268,62 @@ class _AIAssistantPageState extends State<AIAssistantPage> with SingleTickerProv
           ),
           Padding(
             padding: EdgeInsets.all(16),
-            child: Row(
+            child: Column(
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    minLines: 1,
-                    maxLines: 4,
-                    style: TextStyle(fontSize: 16, color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: 'Type your message...',
-                      hintStyle: TextStyle(color: Colors.white54),
-                      filled: true,
-                      fillColor: Colors.black,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none,
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _textController,
+                        minLines: 1,
+                        maxLines: 4,
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'Type your message...',
+                          hintStyle: TextStyle(color: Colors.white54),
+                          filled: true,
+                          fillColor: Colors.black,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                        ),
+                        onSubmitted: (_) => _handleSubmit(),
                       ),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                     ),
-                    onSubmitted: (_) => _handleSubmit(),
-                  ),
+                    SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(_isListening ? Icons.mic_off : Icons.mic, color: Colors.blue),
+                      onPressed: _handleSpeechButtonPressed,
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.send, color: Colors.blue),
+                      onPressed: _handleSubmit,
+                    ),
+                  ],
                 ),
-                SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(_isListening ? Icons.mic_off : Icons.mic, color: Colors.blue),
-                  onPressed: _handleSpeechButtonPressed,
-                ),
-                IconButton(
-                  icon: Icon(Icons.send, color: Colors.blue),
-                  onPressed: _handleSubmit,
+                SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => _handleUserDecision('approve'),
+                      child: Text('Approve'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => _handleUserDecision('modify'),
+                      child: Text('Modify'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => _handleUserDecision('explain'),
+                      child: Text('Explain'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => _handleUserDecision('cancel'),
+                      child: Text('Cancel'),
+                    ),
+                  ],
                 ),
               ],
             ),
