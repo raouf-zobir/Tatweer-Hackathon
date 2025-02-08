@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../constants/pages.dart';
+import '../../../constants/menu_items.dart';
 import '../../../controllers/menu_app_controller.dart';
+import '../../../utils/responsive.dart';
+import '../../../constants/style.dart';
 
 class SideMenu extends StatelessWidget {
   const SideMenu({Key? key}) : super(key: key);
@@ -9,96 +11,73 @@ class SideMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      child: ListView(
-        children: [
-          DrawerHeader(
-            child: Image.asset("assets/images/logo.png"),
-          ),
-          _DrawerListTile(
-            title: "Dashboard",
-            icon: Icons.dashboard_outlined,
-            page: DashboardPage.dashboard,
-          ),
-          _DrawerListTile(
-            title: "Assistant",
-            icon: Icons.speaker,
-            page: DashboardPage.aiAssistant,
-          ),
-          _DrawerListTile(
-            title: "Predict Risk",
-            icon: Icons.assessment_outlined,
-            page: DashboardPage.predict,
-          ),
-          _DrawerListTile(
-            title: "Products",
-            icon: Icons.shopping_bag_outlined,
-            page: DashboardPage.products,
-          ),
-
-          _DrawerListTile(
-            title: "Order Lists",
-            icon: Icons.list_alt_outlined,
-            page: DashboardPage.orderLists,
-          ),
-          _DrawerListTile(
-            title: "Product Stock",
-            icon: Icons.inventory_2_outlined,
-            page: DashboardPage.productStock,
-          ),
-          _DrawerListTile(
-            title: "Calendar",
-            icon: Icons.calendar_today_outlined,
-            page: DashboardPage.calendar,
-          ),
-          _DrawerListTile(
-            title: "Contact",
-            icon: Icons.contacts_outlined,
-            page: DashboardPage.contact,
-          ),
-          _DrawerListTile(
-            title: "Settings",
-            icon: Icons.settings_outlined,
-            page: DashboardPage.settings,
-          ),
-          _DrawerListTile(
-            title: "LogOut",
-            icon: Icons.logout_outlined,
-            page: DashboardPage.logout,
-          ),
-
-        ],
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            DrawerHeader(
+              child: Image.asset(
+                "assets/images/i2.png",
+                fit: BoxFit.contain,
+              ),
+            ),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              itemCount: sideMenuItems.length,
+              separatorBuilder: (context, index) => SizedBox(height: defaultPadding / 2),
+              itemBuilder: (context, index) => DrawerListTile(
+                title: sideMenuItems[index].title,
+                icon: sideMenuItems[index].icon,
+                press: () {
+                  context.read<MenuAppController>().changePage(sideMenuItems[index].page);
+                  if (Responsive.isMobile(context)) {
+                    Navigator.pop(context);
+                  }
+                },
+                selected: context.watch<MenuAppController>().currentPage == sideMenuItems[index].page,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _DrawerListTile extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final DashboardPage page;
-
-  const _DrawerListTile({
+class DrawerListTile extends StatelessWidget {
+  const DrawerListTile({
+    Key? key,
     required this.title,
     required this.icon,
-    required this.page,
-  });
+    required this.press,
+    this.selected = false,
+  }) : super(key: key);
+
+  final String title;
+  final IconData icon;
+  final VoidCallback press;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<MenuAppController>(
-      builder: (context, controller, _) => ListTile(
-        onTap: () {
-          controller.changePage(page);
-          // Close drawer on mobile
-          if (MediaQuery.of(context).size.width < 1100) {
-            Navigator.pop(context);
-          }
-        },
-        horizontalTitleGap: 16.0, // Increased from 0.0 to 16.0
-        leading: Icon(icon),
-        title: Text(title),
-        selected: controller.currentPage == page,
+    return ListTile(
+      onTap: press,
+      horizontalTitleGap: 16.0,  // Increased from default
+      contentPadding: EdgeInsets.symmetric(horizontal: defaultPadding),  // Add padding
+      leading: Icon(
+        icon, 
+        size: 24,  // Consistent icon size
+        color: selected ? Colors.white : Colors.white54
       ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: selected ? Colors.white : Colors.white54,
+          fontSize: 16,  // Consistent text size
+        ),
+      ),
+      selected: selected,
+      selectedTileColor: Colors.white.withOpacity(0.1),
     );
   }
 }

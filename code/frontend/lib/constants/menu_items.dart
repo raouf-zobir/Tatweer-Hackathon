@@ -50,6 +50,11 @@ const List<MenuItem> sideMenuItems = [
     page: DashboardPage.contact,
   ),
   MenuItem(
+    title: "AI Assistant",
+    icon: Icons.smart_toy,
+    page: DashboardPage.aiAssistant,
+  ),
+  MenuItem(
     title: "Settings",
     icon: Icons.settings,
     page: DashboardPage.settings,

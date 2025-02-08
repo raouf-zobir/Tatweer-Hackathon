@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../constants/style.dart';
 import '../../providers/auth_provider.dart';
 import '../main/main_screen.dart';
-import 'sign_up_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -26,52 +23,26 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => _errorMessage = 'Please accept the terms and conditions');
       return;
     }
-
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
 
     try {
-      // Attempt Firebase login
-      UserCredential userCredential =
-          await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+      final success = await context.read<AuthProvider>().login(
+        _emailController.text,
+        _passwordController.text,
       );
 
-      if (userCredential.user != null && mounted) {
-        // Save user data in Firestore
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .set({
-          'email': _emailController.text.trim(),
-          'lastLogin': Timestamp.now(),
-        }, SetOptions(merge: true));
-
-        // Navigate to the main screen if login is successful
+      if (success && mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => MainScreen()),
         );
+      } else if (mounted) {
+        setState(() => _errorMessage = 'Invalid credentials');
       }
-    } on FirebaseAuthException catch (e) {
-      // Handle Firebase Auth errors
-      setState(() {
-        if (e.code == 'user-not-found') {
-          _errorMessage = 'No user found for this email.';
-        } else if (e.code == 'wrong-password') {
-          _errorMessage = 'Incorrect password.';
-        } else {
-          _errorMessage = 'Login failed. ${e.message}';
-        }
-      });
-      // Print the error to the console
-      print('Login failed: ${e.message}');
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -149,9 +120,9 @@ class _LoginPageState extends State<LoginPage> {
               Text(
                 "Welcome Back",
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               if (_errorMessage.isNotEmpty) ...[
                 const SizedBox(height: defaultPadding),
@@ -188,6 +159,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               const SizedBox(height: defaultPadding * 2),
+              const SizedBox(height: defaultPadding),
               Row(
                 children: [
                   Checkbox(
@@ -231,26 +203,25 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: defaultPadding),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    "Don't have an account?",
-                    style: TextStyle(color: Colors.white),
-                  ),
+                  const SizedBox(width: defaultPadding),
+                  // Add bypass button
                   TextButton(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: defaultPadding,
+                        vertical: defaultPadding,
+                      ),
+                    ),
                     onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (context) => const SignUpPage()),
+                      // Direct access to dashboard
+                      context.read<AuthProvider>().bypassLogin();
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (context) => MainScreen()),
                       );
                     },
                     child: const Text(
-                      "Sign Up",
-                      style: TextStyle(color: Colors.blue),
+                      "Skip Login",
+                      style: TextStyle(color: Colors.grey),
                     ),
                   ),
                 ],

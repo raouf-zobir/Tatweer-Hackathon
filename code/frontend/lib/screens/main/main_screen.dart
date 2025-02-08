@@ -1,9 +1,11 @@
-import 'package:admin/screens/pages/page_container.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/menu_app_controller.dart';
 import '../../utils/responsive.dart';
-import '../../components/side_menu.dart';
+import '../../constants/pages.dart';  // Add this import
+import 'components/side_menu.dart';
+import '../../screens/pages/ai_assistant_page.dart';
+import '../../screens/pages/page_container.dart';
 
 class MainScreen extends StatelessWidget {
   @override
@@ -25,9 +27,16 @@ class MainScreen extends StatelessWidget {
             Expanded(
               flex: 5,
               child: Consumer<MenuAppController>(
-                builder: (context, controller, _) => PageContainer(
-                  currentPage: controller.currentPage,
-                ),
+                builder: (context, controller, _) {
+                  switch (controller.currentPage) {
+                    case DashboardPage.aiAssistant:
+                      return AIAssistantPage();
+                    default:
+                      return PageContainer(
+                        currentPage: controller.currentPage,
+                      );
+                  }
+                },
               ),
             ),
           ],
