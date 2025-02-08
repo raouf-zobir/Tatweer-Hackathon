@@ -17,5 +17,12 @@ class MenuAppController extends ChangeNotifier {
   void changePage(DashboardPage page) {
     _currentPage = page;
     notifyListeners();
+    switch (page) {
+      case DashboardPage.aiAssistant:
+        Navigator.pushNamed(scaffoldKey.currentContext!, '/ai-assistant');
+        break;
+      default:
+        break;
+    }
   }
 }

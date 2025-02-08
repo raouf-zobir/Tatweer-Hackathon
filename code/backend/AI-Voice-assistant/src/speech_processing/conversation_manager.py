@@ -3,27 +3,29 @@ from .text_to_speech import TTS
 
 
 class ConversationManager:
-    def __init__(self, assistant):
-        self.transcription_response = ""
-        self.assistant = assistant
+    def __init__(self, agent):
+        self.agent = agent
+        # Temporarily disabled speech features
+        # self.speech_to_text = SpeechToText()
+        # self.text_to_speech = TextToSpeech()
 
     async def main(self):
-        def handle_full_sentence(full_sentence):
-            self.transcription_response = full_sentence
+        """
+        Currently disabled - will be restored later
+        Original speech-based conversation loop is commented out for future use
+        """
+        pass
 
-        # Loop indefinitely until "goodbye" is said
-        while True:
-            await get_transcript(handle_full_sentence)
-            
-            # Check for "goodbye" to exit the loop
-            if "goodbye" in self.transcription_response.lower():
-                break
-            
-            llm_response = self.assistant.invoke(self.transcription_response)
-            print(f"AI: {llm_response}")
-
-            tts = TTS()
-            tts.speak(llm_response)
-
-            # Reset transcription_response for the next loop iteration
-            self.transcription_response = ""
+        # Original speech-based code (kept for reference):
+        # while True:
+        #     try:
+        #         # Convert speech to text
+        #         user_input = await self.speech_to_text.listen()
+        #         
+        #         # Process through agent
+        #         response = self.agent.invoke(user_input)
+        #         
+        #         # Convert response to speech
+        #         await self.text_to_speech.speak(response)
+        #     except Exception as e:
+        #         print(f"Error: {e}")

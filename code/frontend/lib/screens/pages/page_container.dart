@@ -11,8 +11,12 @@ import 'terms_page.dart';
 import 'settings_page.dart';
 import 'contact_page.dart';
 import 'calendar_page.dart';
+
 import '../../responsive.dart';
 import '../../components/page_title.dart';
+
+import 'ai_assistant_page.dart';
+
 
 class PageContainer extends StatelessWidget {
   final DashboardPage currentPage;
@@ -36,17 +40,16 @@ class PageContainer extends StatelessWidget {
       case DashboardPage.predictDemand:
         return PredictDemandPage();
       case DashboardPage.products:
+
         return ResponsivePage(
           title: "Products",
           subtitle: "Manage your product inventory",
           icon: Icons.inventory,
         );
-      case DashboardPage.inbox:
-        return ResponsivePage(
-          title: "Inbox",
-          subtitle: "Manage your messages and notifications",
-          icon: Icons.inbox,
-        );
+
+      case DashboardPage.aiAssistant:
+        return AIAssistantPage();
+
       case DashboardPage.orderLists:
         return ResponsivePage(
           title: "Order Lists",

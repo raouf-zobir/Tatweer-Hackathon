@@ -30,9 +30,11 @@ class SideMenu extends StatelessWidget {
             page: DashboardPage.products,
           ),
           _DrawerListTile(
-            title: "Inbox",
-            icon: Icons.inbox_outlined,
-            page: DashboardPage.inbox,
+
+            title: "Assitant",
+            icon: Icons.speaker,
+            page: DashboardPage.aiAssistant,
+
           ),
           _DrawerListTile(
             title: "Order Lists",
@@ -64,6 +66,7 @@ class SideMenu extends StatelessWidget {
             icon: Icons.logout_outlined,
             page: DashboardPage.logout,
           ),
+
         ],
       ),
     );
